@@ -115,7 +115,7 @@ export default function Home() {
               </svg>
             </div>
             <span className="font-semibold text-slate-900 tracking-tight">
-              shorty
+              urlshawtys
             </span>
           </div>
           <nav className="flex items-center gap-6">
