@@ -21,17 +21,6 @@ export function getUserFromToken(token: string | undefined | null): string | nul
   }
 }
 
-export function signToken(userId: string): string {
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64");
-  const payload = Buffer.from(
-    JSON.stringify({ userId, exp: Date.now() + 30 * 24 * 60 * 60 * 1000 }),
-  ).toString("base64");
-  const signature = Buffer.from(
-    Buffer.from(header + "." + payload).toString("base64").slice(0, 43),
-  ).toString("base64");
-  return `${header}.${payload}.${signature}`;
-}
-
 export async function verifyUser(email: string, password: string): Promise<UserRow | null> {
   const user = await findUserByEmail(email);
   if (!user) return null;

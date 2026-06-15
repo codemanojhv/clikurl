@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createLinkRow, findByCode } from "@/lib/store";
+import { createLinkRecord, findByCode } from "@/lib/store";
 
 const CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -9,6 +9,14 @@ function generateCode(): string {
   return Array.from(values)
     .map((v) => CHARACTERS[v % CHARACTERS.length])
     .join("");
+}
+
+function getOwnerEmailFromRequest(request: Request): string | null {
+  const auth = request.headers.get("authorization");
+  if (!auth || !auth.startsWith("Bearer ")) return null;
+  const token = auth.slice("Bearer ".length).trim();
+  const payload = JSON.parse(Buffer.from(token.split(".")[1]?.split("?")?.[0] ?? "", "base64").toString());
+  return typeof payload?.userId === "string" ? payload.userId : null;
 }
 
 export async function POST(request: Request) {
@@ -39,9 +47,14 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_BASE_URL ||
       "https://urlshawtys.vercel.app";
 
-    const row = await createLinkRow({
+    const ownerEmail = getOwnerEmailFromRequest(request);
+    const row = await createLinkRecord({
       code,
       url,
+      createdAt: new Date().toISOString(),
+      clicks: 0,
+      clickHistory: [],
+      ownerEmail,
     });
 
     return NextResponse.json({

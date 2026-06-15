@@ -1,4 +1,23 @@
-export type LinkRow = {
+import fs from "node:fs/promises";
+import path from "node:path";
+
+const DATA_DIR = path.join(process.cwd(), "data");
+const FILE = path.join(DATA_DIR, "links.json");
+
+async function ensure() {
+  try {
+    await fs.access(DATA_DIR);
+  } catch {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+  }
+  try {
+    await fs.access(FILE);
+  } catch {
+    await fs.writeFile(FILE, "[]", "utf-8");
+  }
+}
+
+export type LinkRecord = {
   code: string;
   url: string;
   createdAt: string;
@@ -11,85 +30,85 @@ export type LinkRow = {
     device: string;
     timestamp: string;
   }[];
+  ownerEmail?: string | null;
 };
 
-const byCode = new Map<string, LinkRow>();
-const byUrl = new Map<string, string>();
-
-export async function findByCode(code: string): Promise<LinkRow | undefined> {
-  return byCode.get(code);
-}
-
-export async function findByUrl(url: string): Promise<LinkRow | undefined> {
-  const code = byUrl.get(url);
-  if (!code) return undefined;
-  return byCode.get(code);
-}
-
-export async function createLinkRow(link: { code: string; url: string }): Promise<LinkRow> {
-  const existing = await findByCode(link.code);
-  if (existing) return existing;
-  const duplicate = await findByUrl(link.url);
-  if (duplicate) return duplicate;
-
-  const row: LinkRow = {
-    code: link.code,
-    url: link.url,
-    createdAt: new Date().toISOString(),
-    clicks: 0,
-    clickHistory: [],
-  };
-
-  byCode.set(link.code, row);
-  byUrl.set(link.url, link.code);
-  return row;
-}
-
-export async function recordClick(
-  code: string,
-  clickData: {
-    ip: string;
-    userAgent: string;
-    referrer: string;
-    country: string;
-    device: string;
+async function readAll(): Promise<LinkRecord[]> {
+  await ensure();
+  try {
+    const raw = await fs.readFile(FILE, "utf-8");
+    return (JSON.parse(raw) as LinkRecord[]).filter(Boolean);
+  } catch {
+    return [];
   }
-): Promise<LinkRow | undefined> {
-  const row = byCode.get(code);
-  if (!row) return undefined;
+}
 
-  row.clicks += 1;
-  row.clickHistory = [
-    ...row.clickHistory,
+async function writeAll(items: LinkRecord[]) {
+  await writeFileAtomic(FILE, JSON.stringify(items, null, 2));
+}
+
+async function writeFileAtomic(file: string, contents: string) {
+  await ensure();
+  const tmp = file + ".tmp";
+  await fs.writeFile(tmp, contents, "utf-8");
+  await fs.rename(tmp, file);
+}
+
+export async function createLinkRecord(link: LinkRecord): Promise<LinkRecord> {
+  const items = await readAll();
+  const existing = items.find((item) => item.code === link.code || item.url === link.url);
+  if (existing) return existing;
+  items.unshift(link);
+  await writeAll(items);
+  return link;
+}
+
+export async function findLinkByCode(code: string): Promise<LinkRecord | undefined> {
+  const items = await readAll();
+  return items.find((item) => item.code === code);
+}
+
+export async function recordClickFor(code: string, clickData: {
+  ip: string;
+  userAgent: string;
+  referrer: string;
+  country: string;
+  device: string;
+}): Promise<LinkRecord | undefined> {
+  const items = await readAll();
+  const item = items.find((entry) => entry.code === code);
+  if (!item) return undefined;
+
+  item.clicks += 1;
+  item.clickHistory = [
+    ...item.clickHistory,
     {
-      ...clickData,
+      ip: clickData.ip,
+      userAgent: clickData.userAgent,
+      referrer: clickData.referrer,
+      country: clickData.country,
+      device: clickData.device,
       timestamp: new Date().toISOString(),
     },
   ];
 
-  if (row.clickHistory.length > 1000) {
-    row.clickHistory = row.clickHistory.slice(-1000);
+  if (item.clickHistory.length > 1000) {
+    item.clickHistory = item.clickHistory.slice(-1000);
   }
 
-  return row;
+  await writeAll(items);
+  return item;
 }
 
-export async function deleteLink(code: string): Promise<boolean> {
-  const row = byCode.get(code);
-  if (!row) return false;
-  byCode.delete(code);
-  byUrl.delete(row.url);
-  return true;
-}
-
-export async function listRecent(limit = 50): Promise<LinkRow[]> {
-  return Array.from(byCode.values())
+export async function listRecent(limit = 50): Promise<LinkRecord[]> {
+  const items = await readAll();
+  return items
     .sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1))
     .slice(0, limit);
 }
 
-export async function getAnalytics(code: string) {
-  const link = byCode.get(code);
+export async function getAnalyticsFor(code: string) {
+  const link = await findLinkByCode(code);
   if (!link) return null;
 
   const now = new Date();
@@ -142,4 +161,12 @@ export async function getAnalytics(code: string) {
     deviceBreakdown: deviceCounts,
     recentClicks: clicks.slice(-10).reverse(),
   };
+}
+
+export async function listLinksForOwner(ownerEmail: string): Promise<LinkRecord[]> {
+  const items = await readAll();
+  const normalized = ownerEmail.toLowerCase();
+  return items
+    .filter((item) => item.ownerEmail === normalized)
+    .sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
 }

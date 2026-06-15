@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,14 @@ type ShortResult = {
   createdAt: string;
 };
 
+type SavedLink = {
+  code: string;
+  url: string;
+  createdAt: string;
+  clicks: number;
+  ownerEmail?: string | null;
+};
+
 export default function Home() {
   const [url, setUrl] = useState("");
   const [customAlias, setCustomAlias] = useState("");
@@ -21,8 +29,60 @@ export default function Home() {
   const [result, setResult] = useState<ShortResult | null>(null);
   const [error, setError] = useState("");
   const [history, setHistory] = useState<ShortResult[]>([]);
+  const [savedLinks, setSavedLinks] = useState<SavedLink[]>([]);
   const [copied, setCopied] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const [authUser, setAuthUser] = useState<{ id: string; email: string } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  const getToken = () => {
+    try {
+      const raw = document.cookie.match(/auth_token=([^;]+)/);
+      if (!raw) return null;
+      return raw[1].trim();
+    } catch {
+      return null;
+    }
+  };
+
+  const loadSession = async () => {
+    try {
+      const response = await fetch("/api/auth", { cache: "no-store" });
+      const data = await response.json();
+      setAuthUser(data.user ?? null);
+    } catch {
+      setAuthUser(null);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSession();
+  }, []);
+
+  const loadSavedLinks = async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const response = await fetch("/api/me/links", {
+        headers: { authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setSavedLinks(data.links ?? []);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (authUser?.email) loadSavedLinks();
+    else setSavedLinks([]);
+  }, [authUser?.email]);
 
   const generateShortUrl = useCallback(async () => {
     if (!url.trim()) {
@@ -37,7 +97,6 @@ export default function Home() {
     abortControllerRef.current = new AbortController();
 
     try {
-      // Use our backend API
       const response = await fetch("/api/shorten", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,6 +122,7 @@ export default function Home() {
 
       setResult(shortResult);
       setHistory((prev) => [shortResult, ...prev.slice(0, 9)]);
+      if (authUser?.email) loadSavedLinks();
     } catch (err) {
       if (err instanceof Error && err.name !== "AbortError") {
         setError(err.message);
@@ -70,7 +130,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [url, customAlias]);
+  }, [url, customAlias, authUser?.email]);
 
   const copyToClipboard = useCallback(async (text: string) => {
     try {
@@ -91,6 +151,9 @@ export default function Home() {
     },
     [generateShortUrl]
   );
+
+  const base =
+    process.env.NEXT_PUBLIC_BASE_URL || "https://urlshawtys.vercel.app";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
@@ -125,14 +188,55 @@ export default function Home() {
             >
               Features
             </a>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-slate-600 hover:text-slate-900"
-              onClick={() => setHistory([])}
-            >
-              Clear history
-            </Button>
+            {!authLoading && !authUser && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-slate-600 hover:text-slate-900"
+                onClick={() => {
+                  const email = prompt("Enter email to login/register")?.trim() || "";
+                  const password = prompt("Enter password") || "";
+                  if (!email || !password) return;
+                  fetch("/api/auth", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ mode: "register", email, password }),
+                  })
+                    .then((res) => res.json())
+                    .then((data) => {
+                      if (data.user) loadSession();
+                    })
+                    .catch(() => {});
+                }}
+              >
+                Sign in / Register
+              </Button>
+            )}
+            {!authLoading && authUser && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-slate-600 hover:text-slate-900"
+                onClick={() => {
+                  fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+                    setAuthUser(null);
+                    setSavedLinks([]);
+                  });
+                }}
+              >
+                Sign out
+              </Button>
+            )}
+            {!authLoading && authUser && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-slate-600 hover:text-slate-900"
+                onClick={loadSavedLinks}
+              >
+                Refresh saved links
+              </Button>
+            )}
           </nav>
         </div>
       </header>
@@ -292,8 +396,7 @@ export default function Home() {
                         Scan to share
                       </p>
                       <p className="text-xs text-slate-500">
-                        Works with any smartphone camera or QR reader app. 
-                        High contrast for easy scanning.
+                        Works with any smartphone camera or QR reader app. High contrast for easy scanning.
                       </p>
                       <div className="flex flex-wrap gap-2">
                         <QRDownloadButton url={result.shortUrl} />
@@ -306,44 +409,49 @@ export default function Home() {
           </section>
         )}
 
-        {/* History Section */}
-        {history.length > 0 && (
+        {/* History / Saved Links Section */}
+        {(savedLinks.length > 0 || history.length > 0 || authUser?.email) && (
           <section className="pb-20">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">
-              Recent links
+              {authUser?.email ? `Saved links for ${authUser.email}` : "Recent links"}
             </h2>
             <div className="space-y-2 max-w-2xl">
-              {history.map((item) => (
-                <div
-                  key={item.shortCode + item.createdAt}
-                  className="flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-100 bg-white hover:border-slate-200 transition-colors"
-                >
-                  <div className="min-w-0 flex-1">
-                    <a
-                      href={item.shortUrl}
-                      className="text-sm font-medium text-slate-900 hover:text-slate-700 block truncate"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {item.shortUrl}
-                    </a>
-                    <p className="text-xs text-slate-400 truncate mt-0.5">
-                      {item.originalUrl}
-                    </p>
+              {(authUser?.email ? savedLinks : history).map((item) => {
+                const shortUrl = item.shortUrl ?? `${base}/${item.code}`;
+                const originalUrl = item.originalUrl ?? item.url;
+                const key = item.shortCode ?? item.code;
+                return (
+                  <div
+                    key={key + item.createdAt}
+                    className="flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-100 bg-white hover:border-slate-200 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <a
+                        href={shortUrl}
+                        className="text-sm font-medium text-slate-900 hover:text-slate-700 block truncate"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {shortUrl}
+                      </a>
+                      <p className="text-xs text-slate-400 truncate mt-0.5">
+                        {originalUrl}
+                      </p>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => copyToClipboard(shortUrl)}
+                        aria-label={`Copy ${shortUrl}`}
+                      >
+                        <CopyIcon />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1.5 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => copyToClipboard(item.shortUrl)}
-                      aria-label={`Copy ${item.shortUrl}`}
-                    >
-                      <CopyIcon />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
@@ -396,6 +504,7 @@ function QRCodeDisplay({ url, label }: { url: string; label: string }) {
         aria-label={label}
         role="img"
         title={label}
+        data-qr-svg
       />
     </div>
   );
@@ -538,7 +647,7 @@ function CopyIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={2}
-        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
       />
     </svg>
   );
@@ -591,13 +700,13 @@ function QRCodeIcon() {
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
-      <rect x="3" y="3" width="7" height="7" rx="1" strokeWidth="2" />
-      <rect x="14" y="3" width="7" height="7" rx="1" strokeWidth="2" />
-      <rect x="3" y="14" width="7" height="7" rx="1" strokeWidth="2" />
-      <rect x="14" y="14" width="3" height="3" rx="0.5" strokeWidth="2" />
-      <rect x="18" y="14" width="3" height="3" rx="0.5" strokeWidth="2" />
-      <rect x="14" y="18" width="3" height="3" rx="0.5" strokeWidth="2" />
-      <rect x="18" y="18" width="3" height="3" rx="0.5" strokeWidth="2" />
+      <rect x="3" y="3" width="7" height="7" rx="1" strokeWidth={2} />
+      <rect x="14" y="3" width="7" height="7" rx="1" strokeWidth={2} />
+      <rect x="3" y="14" width="7" height="7" rx="1" strokeWidth={2} />
+      <rect x="14" y="14" width="3" height="3" rx="0.5" strokeWidth={2} />
+      <rect x="18" y="14" width="3" height="3" rx="0.5" strokeWidth={2} />
+      <rect x="14" y="18" width="3" height="3" rx="0.5" strokeWidth={2} />
+      <rect x="18" y="18" width="3" height="3" rx="0.5" strokeWidth={2} />
     </svg>
   );
 }
