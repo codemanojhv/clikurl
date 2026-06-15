@@ -1,62 +1,145 @@
-const CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+export type LinkRow = {
+  code: string;
+  url: string;
+  createdAt: string;
+  clicks: number;
+  clickHistory: {
+    ip: string;
+    userAgent: string;
+    referrer: string;
+    country: string;
+    device: string;
+    timestamp: string;
+  }[];
+};
 
-function generateCode(): string {
-  const values = new Uint8Array(6);
-  crypto.getRandomValues(values);
-  return Array.from(values)
-    .map((v) => CHARACTERS[v % CHARACTERS.length])
-    .join("");
+const byCode = new Map<string, LinkRow>();
+const byUrl = new Map<string, string>();
+
+export async function findByCode(code: string): Promise<LinkRow | undefined> {
+  return byCode.get(code);
 }
 
-function isValidUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
+export async function findByUrl(url: string): Promise<LinkRow | undefined> {
+  const code = byUrl.get(url);
+  if (!code) return undefined;
+  return byCode.get(code);
 }
 
-type LinkRecord = { url: string; createdAt: number };
+export async function createLinkRow(link: { code: string; url: string }): Promise<LinkRow> {
+  const existing = await findByCode(link.code);
+  if (existing) return existing;
+  const duplicate = await findByUrl(link.url);
+  if (duplicate) return duplicate;
 
-class LinkStore {
-  private store = new Map<string, LinkRecord>();
+  const row: LinkRow = {
+    code: link.code,
+    url: link.url,
+    createdAt: new Date().toISOString(),
+    clicks: 0,
+    clickHistory: [],
+  };
 
-  create(url: string, customAlias?: string) {
-    if (!isValidUrl(url)) {
-      throw new Error("Invalid URL");
-    }
-
-    if (customAlias) {
-      const normalized = customAlias.trim().toLowerCase();
-      if (!/^[a-z0-9-]+$/.test(normalized) || normalized.length < 2 || normalized.length > 30) {
-        throw new Error("Invalid custom alias");
-      }
-      if (this.store.has(normalized)) {
-        throw new Error("Alias taken");
-      }
-      this.store.set(normalized, { url, createdAt: Date.now() });
-      return normalized;
-    }
-
-    let code = generateCode();
-    let attempts = 0;
-    while (this.store.has(code) && attempts < 10) {
-      code = generateCode();
-      attempts++;
-    }
-
-    if (attempts >= 10) {
-      throw new Error("Failed to generate code");
-    }
-
-    this.store.set(code, { url, createdAt: Date.now() });
-    return code;
-  }
-
-  get(code: string) {
-    return this.store.get(code) || null;
-  }
+  byCode.set(link.code, row);
+  byUrl.set(link.url, link.code);
+  return row;
 }
 
-export const links = new LinkStore();
+export async function recordClick(
+  code: string,
+  clickData: {
+    ip: string;
+    userAgent: string;
+    referrer: string;
+    country: string;
+    device: string;
+  }
+): Promise<LinkRow | undefined> {
+  const row = byCode.get(code);
+  if (!row) return undefined;
+
+  row.clicks += 1;
+  row.clickHistory = [
+    ...row.clickHistory,
+    {
+      ...clickData,
+      timestamp: new Date().toISOString(),
+    },
+  ];
+
+  if (row.clickHistory.length > 1000) {
+    row.clickHistory = row.clickHistory.slice(-1000);
+  }
+
+  return row;
+}
+
+export async function deleteLink(code: string): Promise<boolean> {
+  const row = byCode.get(code);
+  if (!row) return false;
+  byCode.delete(code);
+  byUrl.delete(row.url);
+  return true;
+}
+
+export async function listRecent(limit = 50): Promise<LinkRow[]> {
+  return Array.from(byCode.values())
+    .sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1))
+    .slice(0, limit);
+}
+
+export async function getAnalytics(code: string) {
+  const link = byCode.get(code);
+  if (!link) return null;
+
+  const now = new Date();
+  const oneDay = 24 * 60 * 60 * 1000;
+  const oneWeek = 7 * oneDay;
+  const clicks = link.clickHistory ?? [];
+
+  const clicks24h = clicks.filter(
+    (c) => now.getTime() - new Date(c.timestamp).getTime() < oneDay
+  ).length;
+  const clicks7d = clicks.filter(
+    (c) => now.getTime() - new Date(c.timestamp).getTime() < oneWeek
+  ).length;
+
+  const referrerCounts: Record<string, number> = {};
+  clicks.forEach((c) => {
+    const ref = c.referrer || "direct";
+    referrerCounts[ref] = (referrerCounts[ref] || 0) + 1;
+  });
+  const topReferrers = Object.entries(referrerCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([referrer, count]) => ({ referrer, count }));
+
+  const countryCounts: Record<string, number> = {};
+  clicks.forEach((c) => {
+    const country = c.country || "unknown";
+    countryCounts[country] = (countryCounts[country] || 0) + 1;
+  });
+  const topCountries = Object.entries(countryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([country, count]) => ({ country, count }));
+
+  const deviceCounts: Record<string, number> = { mobile: 0, desktop: 0, tablet: 0, other: 0 };
+  clicks.forEach((c) => {
+    const raw = c.device || "other";
+    deviceCounts[raw] = (deviceCounts[raw] || 0) + 1;
+  });
+
+  return {
+    code,
+    originalUrl: link.url,
+    createdAt: link.createdAt,
+    totalClicks: link.clicks,
+    clicks24h,
+    clicks7d,
+    topReferrers,
+    topCountries,
+    deviceBreakdown: deviceCounts,
+    recentClicks: clicks.slice(-10).reverse(),
+  };
+}

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createLinkRow, findByCode } from "@/lib/db";
+import { createLinkRow, findByCode } from "@/lib/store";
 
 const CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -37,9 +37,7 @@ export async function POST(request: Request) {
     const code = customAlias || generateCode();
     const base =
       process.env.NEXT_PUBLIC_BASE_URL ||
-      (request.headers.get("x-forwarded-host")
-        ? `https://${request.headers.get("x-forwarded-host")}`
-        : "https://urlshawtys.vercel.app");
+      "https://urlshawtys.vercel.app";
 
     const row = await createLinkRow({
       code,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findByCode, recordClick } from "@/lib/db";
+import { findByCode, recordClick } from "@/lib/store";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
