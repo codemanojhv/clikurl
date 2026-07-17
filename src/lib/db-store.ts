@@ -178,7 +178,7 @@ export async function listLinksForOwner(userId: string): Promise<LinkRecord[]> {
     .from(schema.links)
     .where(eq(schema.links.ownerId, userId))
     .orderBy(desc(schema.links.createdAt));
-  return rows.map((r) => ({
+  return rows.map((r: any) => ({
     code: r.code,
     url: r.url,
     createdAt: r.createdAt,
@@ -231,11 +231,11 @@ export async function getAnalyticsFor(code: string): Promise<AnalyticsData | nul
     .orderBy(desc(schema.clicks.timestamp));
 
   const totalClicks = allClicks.length;
-  const clicks24h = allClicks.filter((c) => c.timestamp >= dayAgo).length;
-  const clicks7d = allClicks.filter((c) => c.timestamp >= weekAgo).length;
+  const clicks24h = allClicks.filter((c: any) => c.timestamp >= dayAgo).length;
+  const clicks7d = allClicks.filter((c: any) => c.timestamp >= weekAgo).length;
 
   const referrerCounts: Record<string, number> = {};
-  allClicks.forEach((c) => {
+  allClicks.forEach((c: any) => {
     const ref = c.referrer || "direct";
     referrerCounts[ref] = (referrerCounts[ref] || 0) + 1;
   });
@@ -245,7 +245,7 @@ export async function getAnalyticsFor(code: string): Promise<AnalyticsData | nul
     .map(([referrer, count]) => ({ referrer, count }));
 
   const countryCounts: Record<string, number> = {};
-  allClicks.forEach((c) => {
+  allClicks.forEach((c: any) => {
     const country = c.country || "unknown";
     countryCounts[country] = (countryCounts[country] || 0) + 1;
   });
@@ -255,7 +255,7 @@ export async function getAnalyticsFor(code: string): Promise<AnalyticsData | nul
     .map(([country, count]) => ({ country, count }));
 
   const deviceCounts = { mobile: 0, desktop: 0, tablet: 0, other: 0 };
-  allClicks.forEach((c) => {
+  allClicks.forEach((c: any) => {
     const d = (c.device || "other").toLowerCase();
     if (d in deviceCounts) (deviceCounts as Record<string, number>)[d]++;
     else deviceCounts.other++;
@@ -300,7 +300,7 @@ export async function listApiKeys(userId: string): Promise<ApiKeyRecord[]> {
     .from(schema.apiKeys)
     .where(and(eq(schema.apiKeys.userId, userId), isNull(schema.apiKeys.revokedAt)))
     .orderBy(desc(schema.apiKeys.createdAt));
-  return rows.map((r) => ({
+  return rows.map((r: any) => ({
     id: r.id,
     name: r.name,
     lastChars: r.lastChars,
@@ -347,7 +347,7 @@ export async function addDomain(userId: string, domainName: string): Promise<{ i
 export async function listDomainsForUser(userId: string): Promise<{ id: string; domainName: string; createdAt: string }[]> {
   const db = getDb();
   const rows = await db.select().from(schema.domains).where(eq(schema.domains.userId, userId));
-  return rows.map(r => ({ id: r.id, domainName: r.domainName, createdAt: r.createdAt }));
+  return rows.map((r: any) => ({ id: r.id, domainName: r.domainName, createdAt: r.createdAt }));
 }
 
 export async function deleteDomain(id: string, userId: string): Promise<boolean> {

@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
   // Calculate referrers
   const referrerCounts: Record<string, number> = {};
-  allClicks.forEach((c) => {
+  allClicks.forEach((c: any) => {
     const ref = c.referrer || "direct";
     // clean up domain from referrer url
     let label = ref;
@@ -62,7 +62,7 @@ export async function GET(request: Request) {
     dailyCounts[dateStr] = 0;
   }
 
-  allClicks.forEach((c) => {
+  allClicks.forEach((c: any) => {
     const dateStr = c.timestamp.split("T")[0];
     if (dateStr in dailyCounts) {
       dailyCounts[dateStr]++;
