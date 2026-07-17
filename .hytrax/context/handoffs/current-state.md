@@ -10,7 +10,7 @@ files:
   - src/
   - .hytrax/
   - vault/
-status: active
+status: superseded
 timestamp: 2026-07-17T14:00:00Z
 ---
 
