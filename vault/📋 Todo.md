@@ -10,10 +10,10 @@
 ## Features
 - [ ] Password reset flow
 - [ ] Email verification
-- [ ] Team / workspace support with shared links
-- [ ] Custom domain / branded short links
+- [ ] Team / workspace support (Paused / removed for now)
+- [x] Custom domain / branded short links
 - [ ] Bulk creation API (import CSV)
-- [ ] Link expiry / TTL
+- [x] Link expiry / TTL / click limits
 
 ## Frontend
 - [ ] Dark mode toggle

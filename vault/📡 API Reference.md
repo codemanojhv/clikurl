@@ -129,3 +129,90 @@ Revoke an API key.
 
 **Auth:** Cookie
 **Response (200):** `{ "success": true }`
+
+---
+
+## POST /api/domains
+Register a new custom brand domain.
+
+**Auth:** Cookie or API key (Bearer token)
+**Request:**
+```json
+{
+  "domain": "go.kfc.in"
+}
+```
+**Response (200):**
+```json
+{
+  "domain": "go.kfc.in",
+  "status": "pending",
+  "dns": {
+    "type": "CNAME",
+    "name": "go",
+    "value": "cname.clikurl.vercel-dns.com"
+  }
+}
+```
+
+---
+
+## POST /api/domains/[id]/verify
+Verify domain DNS CNAME mapping.
+
+**Auth:** Cookie or API key (Bearer token)
+**Query Parameters:** `bypass=true` (optional, to bypass CNAME DNS check)
+**Response (200):**
+```json
+{
+  "id": "domain-uuid-here",
+  "status": "verified"
+}
+```
+
+---
+
+## POST /api/links
+Unified link shortening endpoint for developer integrations.
+
+**Auth:** Cookie or API key (Bearer token)
+**Request:**
+```json
+{
+  "destination": "https://kfc.in/skjefsbrjybrd",
+  "domain": "go.kfc.in",
+  "slug": "rgdgv",
+  "clickLimit": 100,
+  "expiresAt": "2026-08-17T00:00:00.000Z"
+}
+```
+(Supports parameter aliases: `destination`/`url`, `slug`/`customAlias`, `domain`/`customDomain`)
+
+**Response (200):**
+```json
+{
+  "shortUrl": "https://go.kfc.in/rgdgv",
+  "originalUrl": "https://kfc.in/skjefsbrjybrd",
+  "shortCode": "rgdgv",
+  "createdAt": "2026-07-17T..."
+}
+```
+
+---
+
+## PATCH /api/me/links/[code]
+Toggle active link's archive status.
+
+**Auth:** Cookie
+**Request:**
+```json
+{
+  "isArchived": true
+}
+```
+**Response (200):**
+```json
+{
+  "success": true
+}
+```
