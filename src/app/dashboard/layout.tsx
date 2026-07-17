@@ -73,20 +73,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   const renderLink = (item: { href: string; label: string; icon: React.ReactNode }) => {
-    // If the path is dashboard, keys or links it is functional, otherwise it is a visual mockup placeholder
-    const isMock = !["/dashboard", "/dashboard/keys", "/dashboard/links", "/pricing"].includes(item.href);
     const isActive = pathname === item.href;
 
     return (
       <a
         key={item.href}
-        href={isMock ? "#" : item.href}
-        onClick={(e) => {
-          if (isMock) {
-            e.preventDefault();
-            alert(`This is a visual mockup of "${item.label}" from the design system. Functional sections are: Dashboard (Overview), Links, API Keys, and Pricing.`);
-          }
-        }}
+        href={item.href}
         className={cn(
           "flex items-center gap-3 h-9 px-3 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer",
           isActive

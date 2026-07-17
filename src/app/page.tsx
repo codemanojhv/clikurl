@@ -261,7 +261,7 @@ export default function Home() {
 
         {/* Shorten Result Display */}
         {result && (
-          <section data-reveal className="pb-16 max-w-2xl mx-auto opacity-0 translate-y-3 transition-all duration-500">
+          <section className="pb-16 max-w-2xl mx-auto animate-fade-up">
             <div className="bg-white border border-slate-100 shadow-lg rounded-3xl p-6 sm:p-8">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1.5 flex-1 min-w-0">
@@ -335,7 +335,7 @@ export default function Home() {
 
         {/* History / Saved Links list */}
         {!authLoading && history.length > 0 && !authUser && (
-          <section data-reveal className="pb-20 max-w-lg mx-auto opacity-0 translate-y-3 transition-all duration-500">
+          <section className="pb-20 max-w-lg mx-auto animate-fade-up">
             <h2 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-4">Recent shortened links</h2>
             <div className="space-y-2">
               {history.map((item) => (
@@ -354,7 +354,7 @@ export default function Home() {
         )}
 
         {!authLoading && savedLinks.length > 0 && authUser?.email && (
-          <section data-reveal className="pb-20 max-w-lg mx-auto opacity-0 translate-y-3 transition-all duration-500">
+          <section className="pb-20 max-w-lg mx-auto animate-fade-up">
             <h2 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-4">Saved links</h2>
             <div className="space-y-2">
               {savedLinks.map((item) => (
