@@ -85,7 +85,10 @@ export default function DashboardLinksPage() {
   }
 
   async function handleCopy(code: string) {
-    const url = `${window.location.origin}/${code}`;
+    const link = links.find((l) => l.code === code);
+    const url = link?.customDomain
+      ? `https://${link.customDomain}/${code}`
+      : `${window.location.origin}/${code}`;
     try {
       await navigator.clipboard.writeText(url);
     } catch {

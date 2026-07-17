@@ -336,18 +336,27 @@ export async function findApiKeyByKey(key: string): Promise<{ userId: string } |
   return { userId: row.userId };
 }
 
-export async function addDomain(userId: string, domainName: string): Promise<{ id: string; domainName: string; createdAt: string }> {
+export async function addDomain(userId: string, domainName: string): Promise<{ id: string; domainName: string; status: string; createdAt: string }> {
   const db = getDb();
   const id = crypto.randomUUID();
   const createdAt = new Date().toISOString();
-  await db.insert(schema.domains).values({ id, userId, domainName: domainName.toLowerCase().trim(), createdAt });
-  return { id, domainName, createdAt };
+  const status = "pending";
+  await db.insert(schema.domains).values({ id, userId, domainName: domainName.toLowerCase().trim(), status, createdAt });
+  return { id, domainName, status, createdAt };
 }
 
-export async function listDomainsForUser(userId: string): Promise<{ id: string; domainName: string; createdAt: string }[]> {
+export async function listDomainsForUser(userId: string): Promise<{ id: string; domainName: string; status: string; createdAt: string }[]> {
   const db = getDb();
   const rows = await db.select().from(schema.domains).where(eq(schema.domains.userId, userId));
-  return rows.map((r: any) => ({ id: r.id, domainName: r.domainName, createdAt: r.createdAt }));
+  return rows.map((r: any) => ({ id: r.id, domainName: r.domainName, status: r.status || "pending", createdAt: r.createdAt }));
+}
+
+export async function verifyDomain(id: string, userId: string): Promise<boolean> {
+  const db = getDb();
+  const rows = await db.select().from(schema.domains).where(and(eq(schema.domains.id, id), eq(schema.domains.userId, userId)));
+  if (rows.length === 0) return false;
+  await db.update(schema.domains).set({ status: "verified" }).where(eq(schema.domains.id, id));
+  return true;
 }
 
 export async function deleteDomain(id: string, userId: string): Promise<boolean> {

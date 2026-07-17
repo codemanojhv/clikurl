@@ -22,6 +22,7 @@ type SavedLink = {
 type Domain = {
   id: string;
   domainName: string;
+  status: string;
 };
 
 const BASE = "https://clikurl.vercel.app";
@@ -332,12 +333,19 @@ export default function Home() {
                             className="w-full h-10 px-3 rounded-lg border border-slate-200 text-xs text-slate-700 bg-white outline-none focus:border-blue-500"
                           >
                             <option value="">clikurl.vercel.app (default)</option>
-                            {userDomains.map((dom) => (
-                              <option key={dom.id} value={dom.domainName}>
-                                {dom.domainName}
-                              </option>
-                            ))}
+                            {userDomains
+                              .filter((dom) => dom.status === "verified")
+                              .map((dom) => (
+                                <option key={dom.id} value={dom.domainName}>
+                                  {dom.domainName}
+                                </option>
+                              ))}
                           </select>
+                          {userDomains.some((dom) => dom.status !== "verified") && (
+                            <p className="text-[9px] text-slate-400 mt-1 font-semibold">
+                              ⚠️ Some domains are pending. <a href="/dashboard/domains" className="text-blue-600 hover:underline">Verify DNS CNAME</a> in Dashboard.
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>

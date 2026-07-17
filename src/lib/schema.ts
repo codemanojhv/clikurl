@@ -46,4 +46,5 @@ export const domains = pgTable("domains", {
   userId: text("userId").notNull().references(() => users.id),
   domainName: text("domainName").notNull(),
   createdAt: text("createdAt").notNull(),
+  status: text("status").default("pending"),
 });

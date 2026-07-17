@@ -3,8 +3,29 @@ import { createLink, findLinkByCode, getUserFromSession, getUserIdFromToken, fin
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://clikurl.vercel.app";
 
+async function getAuthUserId(request: Request): Promise<string | null> {
+  const sessionUser = await getUserFromSession(request);
+  if (sessionUser) return sessionUser.id;
+
+  const auth = request.headers.get("authorization");
+  if (auth?.startsWith("Bearer ")) {
+    const token = auth.slice(7).trim();
+    const tokenUserId = getUserIdFromToken(token);
+    if (tokenUserId) return tokenUserId;
+
+    const apiKeyUser = await findApiKeyByKey(token);
+    if (apiKeyUser) return apiKeyUser.userId;
+  }
+  return null;
+}
+
 export async function POST(request: Request) {
   try {
+    const userId = await getAuthUserId(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json().catch(() => ({}));
     const url = typeof body?.destination === "string" ? body.destination.trim() : 
                 typeof body?.url === "string" ? body.url.trim() : "";
@@ -37,27 +58,6 @@ export async function POST(request: Request) {
       }
     }
 
-    let userId: string | null = null;
-
-    const sessionUser = await getUserFromSession(request);
-    if (sessionUser) {
-      userId = sessionUser.id;
-    } else {
-      const auth = request.headers.get("authorization");
-      if (auth?.startsWith("Bearer ")) {
-        const token = auth.slice(7).trim();
-        const tokenUserId = getUserIdFromToken(token);
-        if (tokenUserId) {
-          userId = tokenUserId;
-        } else {
-          const apiKeyUser = await findApiKeyByKey(token);
-          if (apiKeyUser) {
-            userId = apiKeyUser.userId;
-          }
-        }
-      }
-    }
-
     const result = await createLink(url, customAlias || undefined, userId, {
       expiresAt,
       clickLimit,
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       createdAt: result.createdAt,
     });
   } catch (error) {
-    console.error("/api/shorten failed", error);
+    console.error("/api/links failed", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
