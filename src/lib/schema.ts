@@ -1,4 +1,4 @@
-import { pgTable, text, integer, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, serial, boolean } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -13,6 +13,11 @@ export const links = pgTable("links", {
   createdAt: text("createdAt").notNull(),
   clicks: integer("clicks").notNull().default(0),
   ownerId: text("ownerId").references(() => users.id),
+  expiresAt: text("expiresAt"),
+  clickLimit: integer("clickLimit"),
+  customDomain: text("customDomain"),
+  isArchived: boolean("isArchived").default(false),
+  textContent: text("textContent"),
 });
 
 export const clicks = pgTable("clicks", {
@@ -34,4 +39,11 @@ export const apiKeys = pgTable("apiKeys", {
   lastChars: text("lastChars").notNull(),
   createdAt: text("createdAt").notNull(),
   revokedAt: text("revokedAt"),
+});
+
+export const domains = pgTable("domains", {
+  id: text("id").primaryKey(),
+  userId: text("userId").notNull().references(() => users.id),
+  domainName: text("domainName").notNull(),
+  createdAt: text("createdAt").notNull(),
 });

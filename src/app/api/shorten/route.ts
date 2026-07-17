@@ -10,6 +10,10 @@ export async function POST(request: Request) {
     const customAlias =
       typeof body?.customAlias === "string" ? body.customAlias.trim().toLowerCase() : "";
 
+    const expiresAt = typeof body?.expiresAt === "string" ? body.expiresAt.trim() : null;
+    const clickLimit = typeof body?.clickLimit === "number" ? body.clickLimit : null;
+    const customDomain = typeof body?.customDomain === "string" ? body.customDomain.trim().toLowerCase() : null;
+
     if (!url) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
@@ -50,10 +54,14 @@ export async function POST(request: Request) {
       }
     }
 
-    const result = await createLink(url, customAlias || undefined, userId);
+    const result = await createLink(url, customAlias || undefined, userId, {
+      expiresAt,
+      clickLimit,
+      customDomain,
+    });
 
     return NextResponse.json({
-      shortUrl: `${BASE}/${result.shortCode}`,
+      shortUrl: customDomain ? `https://${customDomain}/${result.shortCode}` : `${BASE}/${result.shortCode}`,
       originalUrl: result.originalUrl,
       shortCode: result.shortCode,
       createdAt: result.createdAt,

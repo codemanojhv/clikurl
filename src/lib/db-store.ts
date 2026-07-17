@@ -8,7 +8,18 @@ const SALT_ROUNDS = 10;
 const CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 export type UserRecord = { id: string; email: string; createdAt: string };
-export type LinkRecord = { code: string; url: string; createdAt: string; clicks: number; ownerId: string | null };
+export type LinkRecord = {
+  code: string;
+  url: string;
+  createdAt: string;
+  clicks: number;
+  ownerId: string | null;
+  expiresAt: string | null;
+  clickLimit: number | null;
+  customDomain: string | null;
+  isArchived: boolean;
+  textContent: string | null;
+};
 export type ApiKeyRecord = { id: string; name: string; lastChars: string; createdAt: string; revokedAt: string | null };
 
 export type AnalyticsData = {
@@ -94,17 +105,29 @@ function generateShortCode(length = 6): string {
 export async function createLink(
   url: string,
   customAlias?: string,
-  ownerId?: string | null
+  ownerId?: string | null,
+  options?: { expiresAt?: string | null; clickLimit?: number | null; customDomain?: string | null; textContent?: string | null }
 ): Promise<{ shortUrl: string; shortCode: string; originalUrl: string; createdAt: string }> {
   const db = getDb();
   const code = customAlias || generateShortCode();
   const existing = await db.select().from(schema.links).where(eq(schema.links.code, code));
   if (existing.length > 0) {
     if (customAlias) throw new Error("Custom alias already taken");
-    return createLink(url, undefined, ownerId);
+    return createLink(url, undefined, ownerId, options);
   }
   const createdAt = new Date().toISOString();
-  await db.insert(schema.links).values({ code, url, createdAt, clicks: 0, ownerId: ownerId ?? null });
+  await db.insert(schema.links).values({
+    code,
+    url,
+    createdAt,
+    clicks: 0,
+    ownerId: ownerId ?? null,
+    expiresAt: options?.expiresAt ?? null,
+    clickLimit: options?.clickLimit ?? null,
+    customDomain: options?.customDomain ?? null,
+    isArchived: false,
+    textContent: options?.textContent ?? null,
+  });
   return { shortUrl: code, shortCode: code, originalUrl: url, createdAt };
 }
 
@@ -113,7 +136,28 @@ export async function findLinkByCode(code: string): Promise<LinkRecord | null> {
   const rows = await db.select().from(schema.links).where(eq(schema.links.code, code));
   const row = rows[0];
   if (!row) return null;
-  return { code: row.code, url: row.url, createdAt: row.createdAt, clicks: row.clicks, ownerId: row.ownerId };
+  return {
+    code: row.code,
+    url: row.url,
+    createdAt: row.createdAt,
+    clicks: row.clicks,
+    ownerId: row.ownerId,
+    expiresAt: row.expiresAt,
+    clickLimit: row.clickLimit,
+    customDomain: row.customDomain,
+    isArchived: !!row.isArchived,
+    textContent: row.textContent,
+  };
+}
+
+export async function archiveLink(code: string, isArchived: boolean, userId?: string): Promise<boolean> {
+  const db = getDb();
+  const rows = await db.select().from(schema.links).where(eq(schema.links.code, code));
+  const link = rows[0];
+  if (!link) return false;
+  if (userId && link.ownerId !== userId) return false;
+  await db.update(schema.links).set({ isArchived }).where(eq(schema.links.code, code));
+  return true;
 }
 
 export async function deleteLink(code: string, userId?: string): Promise<boolean> {
@@ -140,6 +184,11 @@ export async function listLinksForOwner(userId: string): Promise<LinkRecord[]> {
     createdAt: r.createdAt,
     clicks: r.clicks,
     ownerId: r.ownerId,
+    expiresAt: r.expiresAt,
+    clickLimit: r.clickLimit,
+    customDomain: r.customDomain,
+    isArchived: !!r.isArchived,
+    textContent: r.textContent,
   }));
 }
 
@@ -285,4 +334,26 @@ export async function findApiKeyByKey(key: string): Promise<{ userId: string } |
   const row = rows[0];
   if (!row) return null;
   return { userId: row.userId };
+}
+
+export async function addDomain(userId: string, domainName: string): Promise<{ id: string; domainName: string; createdAt: string }> {
+  const db = getDb();
+  const id = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  await db.insert(schema.domains).values({ id, userId, domainName: domainName.toLowerCase().trim(), createdAt });
+  return { id, domainName, createdAt };
+}
+
+export async function listDomainsForUser(userId: string): Promise<{ id: string; domainName: string; createdAt: string }[]> {
+  const db = getDb();
+  const rows = await db.select().from(schema.domains).where(eq(schema.domains.userId, userId));
+  return rows.map(r => ({ id: r.id, domainName: r.domainName, createdAt: r.createdAt }));
+}
+
+export async function deleteDomain(id: string, userId: string): Promise<boolean> {
+  const db = getDb();
+  const rows = await db.select().from(schema.domains).where(and(eq(schema.domains.id, id), eq(schema.domains.userId, userId)));
+  if (rows.length === 0) return false;
+  await db.delete(schema.domains).where(eq(schema.domains.id, id));
+  return true;
 }

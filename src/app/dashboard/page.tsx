@@ -5,10 +5,11 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface Link {
-  shortCode: string;
+  code: string;
   url: string;
   clicks: number;
   createdAt: string;
+  isArchived: boolean;
 }
 
 export default function DashboardPage() {
@@ -39,8 +40,9 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  const totalClicks = links.reduce((sum, l) => sum + l.clicks, 0);
-  const linksCount = links.length;
+  const activeLinks = links.filter((l) => !l.isArchived);
+  const totalClicks = activeLinks.reduce((sum, l) => sum + l.clicks, 0);
+  const linksCount = activeLinks.length;
   const mockVisitors = Math.round(totalClicks * 0.85);
 
   const userName = user?.email ? user.email.split("@")[0] : "Showfom";

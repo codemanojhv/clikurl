@@ -7,15 +7,39 @@ export default function TextSharingDashboard() {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
+  const [error, setError] = useState("");
 
-  const handleShare = (e: React.FormEvent) => {
+  const handleShare = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
     setLoading(true);
-    setTimeout(() => {
+    setError("");
+    setResult("");
+
+    const code = "txt-" + Math.random().toString(36).substring(2, 7);
+
+    try {
+      const response = await fetch("/api/shorten", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: `${window.location.origin}/txt/${code}`,
+          customAlias: code,
+          textContent: content.trim(),
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to share snippet");
+      }
+
+      setResult(data.shortUrl);
+    } catch (err: any) {
+      setError(err.message || "Failed to share snippet");
+    } finally {
       setLoading(false);
-      setResult(`https://clikurl.vercel.app/txt-${Math.random().toString(36).substring(2, 7)}`);
-    }, 800);
+    }
   };
 
   return (
@@ -28,7 +52,7 @@ export default function TextSharingDashboard() {
       <Card className="p-6 bg-white border border-slate-100 shadow-sm space-y-5">
         <form onSubmit={handleShare} className="space-y-4">
           <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Snippets Content</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Snippet Content</label>
             <textarea
               placeholder="Paste raw text, logs, or code snippets here..."
               rows={8}
@@ -37,6 +61,8 @@ export default function TextSharingDashboard() {
               className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50/50 text-xs font-mono text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-white transition-all"
             />
           </div>
+
+          {error && <p className="text-xs text-red-500 font-semibold">{error}</p>}
 
           <button
             type="submit"

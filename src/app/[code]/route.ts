@@ -10,6 +10,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    if (link.clickLimit !== null && link.clicks >= link.clickLimit) {
+      return NextResponse.json({ error: "Link click limit reached" }, { status: 410 });
+    }
+
+    if (link.expiresAt !== null) {
+      const expiresDate = new Date(link.expiresAt);
+      if (!isNaN(expiresDate.getTime()) && new Date() > expiresDate) {
+        return NextResponse.json({ error: "Link expired" }, { status: 410 });
+      }
+    }
+
     await recordClick(code, {
       ip: _request.headers.get("x-forwarded-for") || "unknown",
       userAgent: _request.headers.get("user-agent") || "unknown",

@@ -16,6 +16,12 @@ type SavedLink = {
   createdAt: string;
   clicks: number;
   ownerEmail?: string | null;
+  isArchived: boolean;
+};
+
+type Domain = {
+  id: string;
+  domainName: string;
 };
 
 const BASE = "https://clikurl.vercel.app";
@@ -54,6 +60,13 @@ export default function Home() {
   const [authUser, setAuthUser] = useState<{ id: string; email: string } | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // Advanced settings state
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [expiresAt, setExpiresAt] = useState("");
+  const [clickLimit, setClickLimit] = useState("");
+  const [customDomain, setCustomDomain] = useState("");
+  const [userDomains, setUserDomains] = useState<Domain[]>([]);
+
   useScrollReveal();
 
   const loadSession = async () => {
@@ -80,9 +93,24 @@ export default function Home() {
     } catch {}
   };
 
+  const loadUserDomains = async () => {
+    try {
+      const response = await fetch("/api/me/domains");
+      const data = await response.json();
+      if (response.ok && data.domains) {
+        setUserDomains(data.domains);
+      }
+    } catch {}
+  };
+
   useEffect(() => {
-    if (authUser?.email) loadSavedLinks();
-    else setSavedLinks([]);
+    if (authUser?.email) {
+      loadSavedLinks();
+      loadUserDomains();
+    } else {
+      setSavedLinks([]);
+      setUserDomains([]);
+    }
   }, [authUser?.email]);
 
   const generateShortUrl = useCallback(async () => {
@@ -96,11 +124,24 @@ export default function Home() {
     setResult(null);
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
+
+    // Prepare advanced options
+    const payload: Record<string, any> = {
+      url: url.trim(),
+      customAlias: customAlias.trim() || undefined,
+    };
+
+    if (showAdvanced) {
+      if (expiresAt) payload.expiresAt = new Date(expiresAt).toISOString();
+      if (clickLimit) payload.clickLimit = parseInt(clickLimit, 10);
+      if (customDomain) payload.customDomain = customDomain;
+    }
+
     try {
       const response = await fetch("/api/shorten", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim(), customAlias: customAlias.trim() || undefined }),
+        body: JSON.stringify(payload),
         signal: abortControllerRef.current.signal,
       });
       const data = await response.json();
@@ -119,7 +160,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [url, customAlias, authUser?.email]);
+  }, [url, customAlias, authUser?.email, showAdvanced, expiresAt, clickLimit, customDomain]);
 
   const copyToClipboard = useCallback(async (text: string) => {
     try {
@@ -240,6 +281,70 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Advanced Settings collapsible toggler */}
+              {authUser && (
+                <div className="pt-2">
+                  <button
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    {showAdvanced ? "▾ Hide Advanced Settings" : "▸ Advanced Settings (Expiry, Limits, Domains)"}
+                  </button>
+
+                  {showAdvanced && (
+                    <div className="mt-4 p-4 border border-slate-100 rounded-2xl bg-slate-50/40 space-y-4 animate-fade-up">
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
+                            Expiration Date
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={expiresAt}
+                            onChange={(e) => setExpiresAt(e.target.value)}
+                            className="w-full h-10 px-3 rounded-lg border border-slate-200 text-xs text-slate-700 bg-white outline-none focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
+                            Click Limit
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder="e.g. 100"
+                            value={clickLimit}
+                            onChange={(e) => setClickLimit(e.target.value)}
+                            className="w-full h-10 px-3 rounded-lg border border-slate-200 text-xs text-slate-700 bg-white outline-none focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      {userDomains.length > 0 && (
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
+                            Short Domain Brand
+                          </label>
+                          <select
+                            value={customDomain}
+                            onChange={(e) => setCustomDomain(e.target.value)}
+                            className="w-full h-10 px-3 rounded-lg border border-slate-200 text-xs text-slate-700 bg-white outline-none focus:border-blue-500"
+                          >
+                            <option value="">clikurl.vercel.app (default)</option>
+                            {userDomains.map((dom) => (
+                              <option key={dom.id} value={dom.domainName}>
+                                {dom.domainName}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={generateShortUrl}
                 disabled={loading || !url.trim()}
@@ -357,7 +462,7 @@ export default function Home() {
           <section className="pb-20 max-w-lg mx-auto animate-fade-up">
             <h2 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-4">Saved links</h2>
             <div className="space-y-2">
-              {savedLinks.map((item) => (
+              {savedLinks.filter(l => !l.isArchived).map((item) => (
                 <div key={item.code + item.createdAt} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-100 hover:border-slate-200 transition-colors">
                   <div className="min-w-0 flex-1">
                     <a href={`${BASE}/${item.code}`} className="text-sm font-bold text-slate-800 hover:text-blue-600 block truncate transition-colors" target="_blank" rel="noopener noreferrer">{`${BASE}/${item.code}`}</a>

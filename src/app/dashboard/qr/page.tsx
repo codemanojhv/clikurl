@@ -5,10 +5,11 @@ import { Card } from "@/components/ui/card";
 import { QRCodeSVG } from "qrcode.react";
 
 interface Link {
-  shortCode: string;
+  code: string;
   url: string;
   clicks: number;
   createdAt: string;
+  isArchived: boolean;
 }
 
 export default function QRDashboard() {
@@ -64,6 +65,8 @@ export default function QRDashboard() {
     }
   };
 
+  const activeLinks = links.filter((l) => !l.isArchived);
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
@@ -73,32 +76,32 @@ export default function QRDashboard() {
 
       {loading ? (
         <p className="text-sm text-slate-500 animate-pulse">Loading links...</p>
-      ) : links.length === 0 ? (
+      ) : activeLinks.length === 0 ? (
         <Card className="p-8 text-center border-slate-100 bg-white">
           <p className="text-slate-500 text-sm">No links found. Create your first shortened link to generate a QR code.</p>
         </Card>
       ) : (
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {links.map((link) => {
-            const shortUrl = `https://clikurl.vercel.app/${link.shortCode}`;
+          {activeLinks.map((link) => {
+            const shortUrl = `https://clikurl.vercel.app/${link.code}`;
             return (
-              <Card key={link.shortCode} className="p-5 bg-white border border-slate-100 shadow-sm flex flex-col justify-between items-center text-center">
+              <Card key={link.code} className="p-5 bg-white border border-slate-100 shadow-sm flex flex-col justify-between items-center text-center animate-fade-up">
                 <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl mb-4">
-                  <QRCodeSVG id={`qr-${link.shortCode}`} value={shortUrl} size={130} level="H" bgColor="#ffffff" fgColor="#1e293b" marginSize={1} />
+                  <QRCodeSVG id={`qr-${link.code}`} value={shortUrl} size={130} level="H" bgColor="#ffffff" fgColor="#1e293b" marginSize={1} />
                 </div>
                 <div className="w-full space-y-1.5 mb-4">
-                  <p className="text-xs font-bold text-slate-800 truncate">{link.shortCode}</p>
+                  <p className="text-xs font-bold text-slate-800 truncate">/{link.code}</p>
                   <p className="text-[10px] text-slate-400 truncate font-mono">{link.url}</p>
                 </div>
                 <div className="flex gap-2 w-full">
                   <button
-                    onClick={() => downloadQR(link.shortCode, "png")}
+                    onClick={() => downloadQR(link.code, "png")}
                     className="flex-1 text-center py-1.5 rounded-lg text-[10px] font-bold text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer"
                   >
                     PNG
                   </button>
                   <button
-                    onClick={() => downloadQR(link.shortCode, "svg")}
+                    onClick={() => downloadQR(link.code, "svg")}
                     className="flex-1 text-center py-1.5 rounded-lg text-[10px] font-bold text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer"
                   >
                     SVG
