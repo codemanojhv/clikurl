@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "urlshawtys",
+  "name": "clikurl",
   "version": "1.0.0",
-  "description": "Shorten URLs with urlshawtys.vercel.app",
+  "description": "Shorten URLs with clikurl.vercel.app",
   "permissions": ["activeTab", "clipboardWrite"],
-  "host_permissions": ["https://urlshawtys.vercel.app/*", "http://localhost:3000/*"],
+  "host_permissions": ["https://clikurl.vercel.app/*", "http://localhost:3000/*"],
   "action": {
     "default_popup": "popup.html"
   }

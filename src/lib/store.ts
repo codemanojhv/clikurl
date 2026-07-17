@@ -3,7 +3,7 @@ import path from "node:path";
 
 const isServerless = process.env.VERCEL === "1";
 const DATA_DIR = isServerless
-  ? "/tmp/urlshawtys"
+  ? "/tmp/clikurl"
   : path.join(process.cwd(), "data");
 const FILE = path.join(DATA_DIR, "links.json");
 
@@ -164,6 +164,19 @@ export async function getAnalyticsFor(code: string) {
     deviceBreakdown: deviceCounts,
     recentClicks: clicks.slice(-10).reverse(),
   };
+}
+
+export async function deleteLinkRecord(code: string, ownerEmail?: string): Promise<boolean> {
+  const items = await readAll();
+  const idx = items.findIndex((item) => {
+    if (item.code !== code) return false;
+    if (ownerEmail !== undefined) return item.ownerEmail === ownerEmail;
+    return true;
+  });
+  if (idx === -1) return false;
+  items.splice(idx, 1);
+  await writeAll(items);
+  return true;
 }
 
 export async function listLinksForOwner(ownerEmail: string): Promise<LinkRecord[]> {

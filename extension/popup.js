@@ -1,4 +1,4 @@
-const API_BASE = "https://urlshawtys.vercel.app";
+const API_BASE = "https://clikurl.vercel.app";
 
 const currentUrlEl = document.getElementById("currentUrl");
 const codeInput = document.getElementById("code");

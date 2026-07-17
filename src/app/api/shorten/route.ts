@@ -1,23 +1,7 @@
 import { NextResponse } from "next/server";
-import { createLinkRecord, findLinkByCode } from "@/lib/store";
+import { createLink, findLinkByCode, getUserFromSession, getUserIdFromToken, findApiKeyByKey } from "@/lib/db-store";
 
-const CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-
-function generateCode(): string {
-  const values = new Uint8Array(6);
-  crypto.getRandomValues(values);
-  return Array.from(values)
-    .map((v) => CHARACTERS[v % CHARACTERS.length])
-    .join("");
-}
-
-function getOwnerEmailFromRequest(request: Request): string | null {
-  const auth = request.headers.get("authorization");
-  if (!auth || !auth.startsWith("Bearer ")) return null;
-  const token = auth.slice("Bearer ".length).trim();
-  const payload = JSON.parse(Buffer.from(token.split(".")[1]?.split("?")?.[0] ?? "", "base64").toString());
-  return typeof payload?.userId === "string" ? payload.userId : null;
-}
+const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://clikurl.vercel.app";
 
 export async function POST(request: Request) {
   try {
@@ -30,10 +14,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      return NextResponse.json({ error: "URL must start with http:// or https://" }, { status: 400 });
+    }
+
     if (customAlias) {
-      const validAlias = /^[a-z0-9-]+$/;
-      if (!validAlias.test(customAlias) || customAlias.length < 2 || customAlias.length > 30) {
-        return NextResponse.json({ error: "Invalid custom alias" }, { status: 400 });
+      if (!/^[a-z0-9-]+$/.test(customAlias) || customAlias.length < 2 || customAlias.length > 30) {
+        return NextResponse.json({ error: "Custom alias must be 2-30 characters, only lowercase letters, numbers, and hyphens" }, { status: 400 });
       }
 
       const existing = await findLinkByCode(customAlias);
@@ -42,26 +29,34 @@ export async function POST(request: Request) {
       }
     }
 
-    const code = customAlias || generateCode();
-    const base =
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      "https://urlshawtys.vercel.app";
+    let userId: string | null = null;
 
-    const ownerEmail = getOwnerEmailFromRequest(request);
-    const row = await createLinkRecord({
-      code,
-      url,
-      createdAt: new Date().toISOString(),
-      clicks: 0,
-      clickHistory: [],
-      ownerEmail,
-    });
+    const sessionUser = await getUserFromSession(request);
+    if (sessionUser) {
+      userId = sessionUser.id;
+    } else {
+      const auth = request.headers.get("authorization");
+      if (auth?.startsWith("Bearer ")) {
+        const token = auth.slice(7).trim();
+        const tokenUserId = getUserIdFromToken(token);
+        if (tokenUserId) {
+          userId = tokenUserId;
+        } else {
+          const apiKeyUser = await findApiKeyByKey(token);
+          if (apiKeyUser) {
+            userId = apiKeyUser.userId;
+          }
+        }
+      }
+    }
+
+    const result = await createLink(url, customAlias || undefined, userId);
 
     return NextResponse.json({
-      shortUrl: `${base}/${code}`,
-      originalUrl: row.url,
-      shortCode: code,
-      createdAt: row.createdAt,
+      shortUrl: `${BASE}/${result.shortCode}`,
+      originalUrl: result.originalUrl,
+      shortCode: result.shortCode,
+      createdAt: result.createdAt,
     });
   } catch (error) {
     console.error("/api/shorten failed", error);

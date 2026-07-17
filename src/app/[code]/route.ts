@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findLinkByCode, recordClickFor } from "@/lib/store";
+import { findLinkByCode, recordClick } from "@/lib/db-store";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
@@ -10,7 +10,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    await recordClickFor(code, {
+    await recordClick(code, {
       ip: _request.headers.get("x-forwarded-for") || "unknown",
       userAgent: _request.headers.get("user-agent") || "unknown",
       referrer: _request.headers.get("referer") || "direct",
