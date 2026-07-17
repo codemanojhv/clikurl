@@ -16,6 +16,7 @@ export default function DomainsDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [dnsErrors, setDnsErrors] = useState<Record<string, string>>({});
 
   const loadDomains = async () => {
     try {
@@ -45,7 +46,6 @@ export default function DomainsDashboard() {
       if (!res.ok) {
         throw new Error(data.error || "Failed to add domain");
       }
-      // Re-load domains to make sure status is correct
       loadDomains();
       setDomainInput("");
     } catch (err: any) {
@@ -53,10 +53,10 @@ export default function DomainsDashboard() {
     }
   };
 
-  const handleVerifyDomain = async (id: string) => {
+  const handleVerifyDomain = async (id: string, bypass = false) => {
     setVerifyingId(id);
     try {
-      const res = await fetch(`/api/domains/${id}/verify`, {
+      const res = await fetch(`/api/domains/${id}/verify${bypass ? "?bypass=true" : ""}`, {
         method: "POST",
       });
       const data = await res.json();
@@ -66,8 +66,16 @@ export default function DomainsDashboard() {
       setDomains(
         domains.map((d) => (d.id === id ? { ...d, status: "verified" } : d))
       );
+      setDnsErrors((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     } catch (err: any) {
-      alert(err.message || "Failed to verify domain");
+      setDnsErrors((prev) => ({
+        ...prev,
+        [id]: err.message,
+      }));
     } finally {
       setVerifyingId(null);
     }
@@ -122,6 +130,7 @@ export default function DomainsDashboard() {
               {domains.map((dom) => {
                 const isPending = dom.status !== "verified";
                 const dns = getCnameDetails(dom.domainName);
+                const dnsError = dnsErrors[dom.id];
 
                 return (
                   <div key={dom.id} className="p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition-colors animate-fade-up space-y-3">
@@ -140,7 +149,7 @@ export default function DomainsDashboard() {
                         </span>
                         {isPending && (
                           <button
-                            onClick={() => handleVerifyDomain(dom.id)}
+                            onClick={() => handleVerifyDomain(dom.id, false)}
                             disabled={verifyingId === dom.id}
                             className="text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                           >
@@ -155,6 +164,18 @@ export default function DomainsDashboard() {
                         </button>
                       </div>
                     </div>
+
+                    {dnsError && (
+                      <div className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-lg space-y-2 animate-fade-up">
+                        <p className="text-[10px] font-semibold">{dnsError}</p>
+                        <button
+                          onClick={() => handleVerifyDomain(dom.id, true)}
+                          className="text-[10px] font-bold text-white bg-slate-900 hover:bg-slate-800 px-3 py-1 rounded-md transition-colors cursor-pointer"
+                        >
+                          Bypass DNS (For Testing)
+                        </button>
+                      </div>
+                    )}
 
                     {isPending && (
                       <div className="mt-3 p-3 bg-slate-50 border border-slate-100 rounded-lg space-y-2">
