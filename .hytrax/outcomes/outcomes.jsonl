@@ -1,0 +1,12 @@
+{"id":"out-001","task":"rename urlshawtys to clikurl","status":"ACCEPTED","timestamp":"2026-07-17","files":["extension/manifest.json","extension/popup.html","extension/popup.js","src/lib/store.ts","src/app/layout.tsx","src/app/page.tsx","src/app/index.html","src/app/api/shorten/route.ts"]}
+{"id":"out-002","task":"install hytrax","status":"ACCEPTED","timestamp":"2026-07-17","files":["package.json","package-lock.json"]}
+{"id":"out-003","task":"create obsidian vault","status":"ACCEPTED","timestamp":"2026-07-17","files":["vault/"]}
+{"id":"out-004","task":"100x redesign with mesh gradient dark blue clean","status":"REJECTED","timestamp":"2026-07-17","reason":"User requested creative minimal design instead"}
+{"id":"out-005","task":"creative minimal redesign","status":"ACCEPTED","timestamp":"2026-07-17","files":["src/app/globals.css","src/app/page.tsx"]}
+{"id":"out-006","task":"database migration SQLite Drizzle","status":"ACCEPTED","timestamp":"2026-07-17","files":["src/lib/db.ts","src/lib/schema.ts","src/lib/db-store.ts"]}
+{"id":"out-007","task":"API key management system","status":"ACCEPTED","timestamp":"2026-07-17","files":["src/app/api/me/keys/route.ts","src/app/api/me/keys/[id]/route.ts"]}
+{"id":"out-008","task":"login/register pages","status":"ACCEPTED","timestamp":"2026-07-17","files":["src/app/login/page.tsx","src/app/register/page.tsx"]}
+{"id":"out-009","task":"dashboard with link and key management","status":"ACCEPTED","timestamp":"2026-07-17","files":["src/app/dashboard/","src/app/dashboard/layout.tsx","src/app/dashboard/page.tsx","src/app/dashboard/links/page.tsx","src/app/dashboard/keys/page.tsx"]}
+{"id":"out-010","task":"pricing and docs pages","status":"ACCEPTED","timestamp":"2026-07-17","files":["src/app/pricing/page.tsx","src/app/docs/page.tsx"]}
+{"id":"out-011","task":"fix cookie auth flow across all pages","status":"ACCEPTED","timestamp":"2026-07-17","files":["src/app/dashboard/layout.tsx","src/app/dashboard/page.tsx","src/app/dashboard/links/page.tsx","src/app/dashboard/keys/page.tsx","src/app/login/page.tsx","src/app/register/page.tsx","src/app/page.tsx"]}
+{"id":"out-012","task":"hytrax knowledge store","status":"ACCEPTED","timestamp":"2026-07-17","files":[".hytrax/"]}

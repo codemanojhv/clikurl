@@ -1,0 +1,6 @@
+# Hytrax configuration
+[cli]
+max_chars = 8000
+
+[validation]
+strict = false
