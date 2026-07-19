@@ -12,7 +12,7 @@ type ClickRow = typeof schema.clicks.$inferSelect;
 const SALT_ROUNDS = 10;
 const CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-export type UserRecord = { id: string; email: string; createdAt: string };
+export type UserRecord = { id: string; email: string; createdAt: string; tier: string };
 export type LinkRecord = {
   code: string;
   url: string;
@@ -58,6 +58,7 @@ export type FullUserRecord = {
   email: string;
   passwordHash: string;
   createdAt: string;
+  tier: string | null;
 };
 
 export async function createUser(email: string, password: string): Promise<UserRecord> {
@@ -66,15 +67,16 @@ export async function createUser(email: string, password: string): Promise<UserR
   const id = crypto.randomUUID();
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   const createdAt = new Date().toISOString();
-  await db.insert(schema.users).values({ id, email: normalized, passwordHash, createdAt });
-  return { id, email: normalized, createdAt };
+  const tier = "free";
+  await db.insert(schema.users).values({ id, email: normalized, passwordHash, createdAt, tier });
+  return { id, email: normalized, createdAt, tier };
 }
 
 export async function findUserByEmail(email: string): Promise<FullUserRecord | null> {
   const db = getDb();
   const normalized = email.toLowerCase().trim();
   const rows = await db.select().from(schema.users).where(eq(schema.users.email, normalized));
-  return rows[0] || null;
+  return (rows[0] as FullUserRecord) || null;
 }
 
 export async function verifyUser(email: string, password: string): Promise<UserRecord | null> {
@@ -82,7 +84,7 @@ export async function verifyUser(email: string, password: string): Promise<UserR
   if (!user) return null;
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) return null;
-  return { id: user.id, email: user.email, createdAt: user.createdAt };
+  return { id: user.id, email: user.email, createdAt: user.createdAt, tier: user.tier || "free" };
 }
 
 export function createToken(userId: string): string {
@@ -112,7 +114,7 @@ export async function getUserFromSession(request: Request): Promise<UserRecord |
   const rows = await db.select().from(schema.users).where(eq(schema.users.id, userId));
   const row = rows[0];
   if (!row) return null;
-  return { id: row.id, email: row.email, createdAt: row.createdAt };
+  return { id: row.id, email: row.email, createdAt: row.createdAt, tier: row.tier || "free" };
 }
 
 // ─── Link operations ────────────────────────────────────────────────
@@ -388,4 +390,43 @@ export async function deleteDomain(id: string, userId: string): Promise<boolean>
   if (rows.length === 0) return false;
   await db.delete(schema.domains).where(eq(schema.domains.id, id));
   return true;
+}
+
+export async function updateUserTier(userId: string, tier: string): Promise<boolean> {
+  const db = getDb();
+  await db.update(schema.users).set({ tier }).where(eq(schema.users.id, userId));
+  return true;
+}
+
+export async function checkLinkLimit(userId: string | null, customDomain: string | null): Promise<{ allowed: boolean; error?: string }> {
+  if (!userId) {
+    if (customDomain) {
+      return { allowed: false, error: "Custom domains require a Pro or Enterprise plan" };
+    }
+    return { allowed: true };
+  }
+
+  const db = getDb();
+  const rows = await db.select().from(schema.users).where(eq(schema.users.id, userId));
+  const user = rows[0];
+  if (!user) return { allowed: false, error: "User not found" };
+
+  const tier = user.tier || "free";
+
+  if (tier === "free") {
+    if (customDomain) {
+      return { allowed: false, error: "Custom domains require a Pro or Enterprise plan" };
+    }
+    const linkRows = await db.select().from(schema.links).where(eq(schema.links.ownerId, userId));
+    if (linkRows.length >= 100) {
+      return { allowed: false, error: "Free tier is limited to 100 links" };
+    }
+  } else if (tier === "pro") {
+    const linkRows = await db.select().from(schema.links).where(eq(schema.links.ownerId, userId));
+    if (linkRows.length >= 1000) {
+      return { allowed: false, error: "Pro tier is limited to 1000 links" };
+    }
+  }
+
+  return { allowed: true };
 }

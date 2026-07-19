@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createLink, findLinkByCode, getUserFromSession, getUserIdFromToken, findApiKeyByKey } from "@/lib/db-store";
+import { createLink, findLinkByCode, getUserFromSession, getUserIdFromToken, findApiKeyByKey, checkLinkLimit } from "@/lib/db-store";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://clikurl.vercel.app";
 
@@ -56,6 +56,11 @@ export async function POST(request: Request) {
       if (existing) {
         return NextResponse.json({ error: "Alias already taken" }, { status: 409 });
       }
+    }
+
+    const limitCheck = await checkLinkLimit(userId, customDomain);
+    if (!limitCheck.allowed) {
+      return NextResponse.json({ error: limitCheck.error }, { status: 403 });
     }
 
     const result = await createLink(url, customAlias || undefined, userId, {

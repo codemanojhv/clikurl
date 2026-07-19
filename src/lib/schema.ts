@@ -5,6 +5,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("passwordHash").notNull(),
   createdAt: text("createdAt").notNull(),
+  tier: text("tier").default("free"),
 });
 
 export const links = pgTable("links", {

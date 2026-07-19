@@ -27,24 +27,6 @@ type Domain = {
 
 const BASE = "https://clikurl.vercel.app";
 
-function useScrollReveal() {
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("animate-fade-up");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
-    );
-    document.querySelectorAll("[data-reveal]").forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-}
-
 export default function Home() {
   const [url, setUrl] = useState("");
   const [customAlias, setCustomAlias] = useState("");
@@ -55,6 +37,7 @@ export default function Home() {
   const [savedLinks, setSavedLinks] = useState<SavedLink[]>([]);
   const [copied, setCopied] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -67,8 +50,6 @@ export default function Home() {
   const [clickLimit, setClickLimit] = useState("");
   const [customDomain, setCustomDomain] = useState("");
   const [userDomains, setUserDomains] = useState<Domain[]>([]);
-
-  useScrollReveal();
 
   const loadSession = async () => {
     try {
@@ -126,7 +107,6 @@ export default function Home() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
-    // Prepare advanced options
     const payload: Record<string, any> = {
       url: url.trim(),
       customAlias: customAlias.trim() || undefined,
@@ -187,63 +167,119 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#1e293b] font-sans relative overflow-hidden selection:bg-blue-600/10 selection:text-blue-600">
-      {/* Background Soft Blobs */}
-      <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-blue-100/30 to-indigo-100/20 blur-[120px] rounded-full pointer-events-none" />
-      <div className="dot-grid absolute inset-0 pointer-events-none opacity-100" />
+    <div className="min-h-screen bg-[#03000a] text-slate-100 font-sans relative overflow-hidden selection:bg-purple-500/30 selection:text-purple-200">
+      {/* Glow Mesh Gradients */}
+      <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-gradient-to-br from-purple-700/10 to-indigo-700/10 blur-[130px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-1/4 left-1/4 w-[500px] h-[500px] bg-gradient-to-br from-fuchsia-700/5 to-pink-700/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute inset-0 pointer-events-none opacity-[0.02]" style={{ backgroundImage: "radial-gradient(#ffffff 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2.5 text-lg font-extrabold text-blue-600">
-            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <header className="sticky top-0 z-50 bg-[#03000a]/80 backdrop-blur-lg border-b border-purple-950/20">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <a href="/" className="flex items-center gap-2.5 text-base font-black text-white hover:opacity-90 transition-opacity tracking-tight">
+            <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
             </svg>
             clikurl
           </a>
+
+          {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Features</a>
-            <a href="#faq" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">FAQ</a>
-            <a href="/pricing" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Pricing</a>
-            <a href="/docs" className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">Docs</a>
+            <a href="#features" className="text-sm font-medium text-slate-400 hover:text-white transition-all">Features</a>
+            <a href="#faq" className="text-sm font-medium text-slate-400 hover:text-white transition-all">FAQ</a>
+            <a href="/pricing" className="text-sm font-medium text-slate-400 hover:text-white transition-all">Pricing</a>
+            <a href="/docs" className="text-sm font-medium text-slate-400 hover:text-white transition-all">Docs</a>
           </nav>
-          <div className="flex items-center gap-4">
+
+          <div className="hidden md:flex items-center gap-4">
             {!authLoading && !authUser && (
               <>
-                <a href="/login" className="text-sm font-bold text-slate-700 hover:text-blue-600 transition-colors px-3 py-1.5">Sign in</a>
-                <a href="/register" className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-4.5 py-2 rounded-xl transition-all shadow-sm shadow-blue-600/10">Sign up</a>
+                <a href="/login" className="text-sm font-medium text-slate-400 hover:text-white transition-colors px-3 py-1.5">Sign in</a>
+                <a href="/register" className="text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 px-4.5 py-2 rounded-full transition-all border border-purple-500/20 shadow-md shadow-purple-900/10">Sign up</a>
               </>
             )}
             {!authLoading && authUser && (
               <>
-                <a href="/dashboard" className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors">Dashboard</a>
+                <a href="/dashboard" className="text-xs font-bold text-white bg-purple-600/90 hover:bg-purple-600 px-4 py-1.5 rounded-full transition-all border border-purple-500/20 shadow-md shadow-purple-900/10">Dashboard</a>
                 <button
                   onClick={() => fetch("/api/auth/logout", { method: "POST" }).finally(() => { setAuthUser(null); setSavedLinks([]); })}
-                  className="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors"
+                  className="text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
                 >
                   Sign out
                 </button>
               </>
             )}
           </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 text-slate-400 hover:text-white focus:outline-none cursor-pointer"
+            aria-label="Toggle navigation menu"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {mobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
         </div>
+
+        {/* Mobile Navigation Panel */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-purple-950/20 bg-[#03000a]/95 backdrop-blur-xl px-6 py-5 space-y-4 animate-fade-up">
+            <nav className="flex flex-col gap-4">
+              <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-sm font-semibold text-slate-400 hover:text-white transition-all">Features</a>
+              <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="text-sm font-semibold text-slate-400 hover:text-white transition-all">FAQ</a>
+              <a href="/pricing" className="text-sm font-semibold text-slate-400 hover:text-white transition-all">Pricing</a>
+              <a href="/docs" className="text-sm font-semibold text-slate-400 hover:text-white transition-all">Docs</a>
+            </nav>
+            <div className="pt-4 border-t border-purple-950/20 flex flex-col gap-3">
+              {!authLoading && !authUser && (
+                <>
+                  <a href="/login" className="text-sm font-semibold text-slate-400 hover:text-white text-center py-2">Sign in</a>
+                  <a href="/register" className="text-xs font-black text-white bg-purple-600 text-center py-2.5 rounded-full border border-purple-500/20">Sign up</a>
+                </>
+              )}
+              {!authLoading && authUser && (
+                <>
+                  <a href="/dashboard" className="text-xs font-black text-white bg-purple-600 text-center py-2.5 rounded-full border border-purple-500/20">Dashboard</a>
+                  <button
+                    onClick={() => {
+                      fetch("/api/auth/logout", { method: "POST" }).finally(() => { setAuthUser(null); setSavedLinks([]); setMobileMenuOpen(false); });
+                    }}
+                    className="text-sm font-semibold text-slate-400 hover:text-white text-center py-2 cursor-pointer"
+                  >
+                    Sign out
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
+      <main className="max-w-6xl mx-auto px-6 relative z-10 pb-24">
         {/* Hero Section */}
-        <section className="pt-20 pb-16 text-center max-w-3xl mx-auto">
-          <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.08]">
-            Make every connection <span className="text-blue-600">count</span>
+        <section className="pt-24 pb-16 text-center max-w-3xl mx-auto space-y-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-xs font-semibold text-purple-300 tracking-wide">
+            INTRODUCING CLIKURL
+          </div>
+          <h1 className="text-5xl sm:text-7xl font-black tracking-tight text-white leading-[1.05] bg-gradient-to-r from-white via-slate-100 to-purple-400 bg-clip-text text-transparent">
+            Make every connection count
           </h1>
-          <p className="mt-6 text-lg text-slate-500 leading-relaxed max-w-xl mx-auto">
-            Shorten, customize, and optimize your links with clikurl. Instantly generate QR codes and check real-time click analytics.
+          <p className="text-base sm:text-lg text-slate-400 leading-relaxed max-w-xl mx-auto">
+            Shorten, brand, and secure your links with instant redirections. Track engagement metrics and generate vectors QR codes on the fly.
           </p>
 
           {/* Shortener Card */}
-          <div className="mt-12 text-left bg-white border border-slate-100 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] rounded-3xl p-6 sm:p-8 max-w-2xl mx-auto">
-            <div className="space-y-5">
+          <div className="mt-12 text-left bg-slate-950/40 border border-purple-950/30 backdrop-blur-md shadow-2xl rounded-3xl p-6 sm:p-8 max-w-2xl mx-auto relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 rounded-3xl pointer-events-none group-hover:opacity-100 transition-opacity opacity-0" />
+            <div className="space-y-5 relative z-10">
               <div>
-                <label htmlFor="url-input" className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">
+                <label htmlFor="url-input" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
                   Paste Long URL
                 </label>
                 <input
@@ -255,18 +291,18 @@ export default function Home() {
                   onChange={(e) => setUrl(e.target.value)}
                   onKeyDown={handleKeyDown}
                   disabled={loading}
-                  className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-800 placeholder-slate-400 outline-none transition-all duration-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 focus:bg-white disabled:opacity-50"
+                  className="w-full h-12 px-4 rounded-xl border border-purple-950/35 bg-purple-950/10 text-slate-100 placeholder-slate-500 outline-none transition-all duration-200 focus:border-purple-500/80 focus:bg-purple-950/20 disabled:opacity-50 text-sm font-semibold"
                   style={{ borderColor: error ? "#ef4444" : undefined }}
                 />
                 {error && <p className="mt-2 text-xs text-red-500 font-semibold">{error}</p>}
               </div>
 
               <div>
-                <label htmlFor="alias-input" className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">
-                  Customize Slug <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                <label htmlFor="alias-input" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
+                  Customize Slug <span className="text-slate-500 font-normal lowercase">(optional)</span>
                 </label>
-                <div className="flex rounded-xl overflow-hidden border border-slate-200 bg-slate-50/50 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/5 focus-within:bg-white transition-all duration-200">
-                  <span className="inline-flex items-center px-4 bg-slate-100 text-xs font-semibold text-slate-500 border-r border-slate-200 select-none">
+                <div className="flex rounded-xl overflow-hidden border border-purple-950/35 bg-purple-950/10 focus-within:border-purple-500/80 focus-within:bg-purple-950/20 transition-all duration-200">
+                  <span className="inline-flex items-center px-4 bg-purple-950/30 text-xs font-semibold text-purple-400 border-r border-purple-950/35 select-none">
                     clikurl.vercel.app/
                   </span>
                   <input
@@ -277,7 +313,7 @@ export default function Home() {
                     onChange={(e) => setCustomAlias(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30))}
                     onKeyDown={handleKeyDown}
                     disabled={loading}
-                    className="flex-1 h-12 px-4 bg-transparent text-sm text-slate-800 placeholder-slate-400 outline-none disabled:opacity-50"
+                    className="flex-1 h-12 px-4 bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none disabled:opacity-50 font-semibold"
                   />
                 </div>
               </div>
@@ -287,28 +323,28 @@ export default function Home() {
                 <div className="pt-2">
                   <button
                     onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-bold text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 cursor-pointer"
                   >
                     {showAdvanced ? "▾ Hide Advanced Settings" : "▸ Advanced Settings (Expiry, Limits, Domains)"}
                   </button>
 
                   {showAdvanced && (
-                    <div className="mt-4 p-4 border border-slate-100 rounded-2xl bg-slate-50/40 space-y-4 animate-fade-up">
+                    <div className="mt-4 p-4 border border-purple-950/25 rounded-2xl bg-purple-950/5 space-y-4 animate-fade-up">
                       <div className="grid sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
                             Expiration Date
                           </label>
                           <input
                             type="datetime-local"
                             value={expiresAt}
                             onChange={(e) => setExpiresAt(e.target.value)}
-                            className="w-full h-10 px-3 rounded-lg border border-slate-200 text-xs text-slate-700 bg-white outline-none focus:border-blue-500"
+                            className="w-full h-10 px-3 rounded-lg border border-purple-950/35 text-xs text-slate-300 bg-slate-950 outline-none focus:border-purple-500/80 font-medium"
                           />
                         </div>
 
                         <div>
-                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
                             Click Limit
                           </label>
                           <input
@@ -317,20 +353,20 @@ export default function Home() {
                             placeholder="e.g. 100"
                             value={clickLimit}
                             onChange={(e) => setClickLimit(e.target.value)}
-                            className="w-full h-10 px-3 rounded-lg border border-slate-200 text-xs text-slate-700 bg-white outline-none focus:border-blue-500"
+                            className="w-full h-10 px-3 rounded-lg border border-purple-950/35 text-xs text-slate-300 bg-slate-950 outline-none focus:border-purple-500/80 font-medium"
                           />
                         </div>
                       </div>
 
                       {userDomains.length > 0 && (
                         <div>
-                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">
                             Short Domain Brand
                           </label>
                           <select
                             value={customDomain}
                             onChange={(e) => setCustomDomain(e.target.value)}
-                            className="w-full h-10 px-3 rounded-lg border border-slate-200 text-xs text-slate-700 bg-white outline-none focus:border-blue-500"
+                            className="w-full h-10 px-3 rounded-lg border border-purple-950/35 text-xs text-slate-300 bg-slate-950 outline-none focus:border-purple-500/80 font-medium"
                           >
                             <option value="">clikurl.vercel.app (default)</option>
                             {userDomains
@@ -343,7 +379,7 @@ export default function Home() {
                           </select>
                           {userDomains.some((dom) => dom.status !== "verified") && (
                             <p className="text-[9px] text-slate-400 mt-1 font-semibold">
-                              ⚠️ Some domains are pending. <a href="/dashboard/domains" className="text-blue-600 hover:underline">Verify DNS CNAME</a> in Dashboard.
+                              ⚠️ Some domains are pending. <a href="/dashboard/domains" className="text-purple-400 hover:underline">Verify DNS CNAME</a> in Dashboard.
                             </p>
                           )}
                         </div>
@@ -356,7 +392,7 @@ export default function Home() {
               <button
                 onClick={generateShortUrl}
                 disabled={loading || !url.trim()}
-                className="w-full h-12 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-600/10 hover:shadow-blue-600/20 active:bg-blue-800 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                className="w-full h-12 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 shadow-md shadow-purple-600/10 hover:shadow-purple-600/20 active:bg-purple-700 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 border border-purple-500/20"
               >
                 {loading ? (
                   <>
@@ -375,33 +411,33 @@ export default function Home() {
         {/* Shorten Result Display */}
         {result && (
           <section className="pb-16 max-w-2xl mx-auto animate-fade-up">
-            <div className="bg-white border border-slate-100 shadow-lg rounded-3xl p-6 sm:p-8">
+            <div className="bg-slate-950/50 border border-purple-950/30 backdrop-blur-md shadow-2xl rounded-3xl p-6 sm:p-8">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1.5 flex-1 min-w-0">
-                  <p className="text-xs font-bold text-blue-600 uppercase tracking-widest">Your shortened link</p>
-                  <a href={result.shortUrl} className="text-xl font-bold text-slate-900 hover:text-blue-600 break-all block transition-colors" target="_blank" rel="noopener noreferrer">
+                  <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Your shortened link</p>
+                  <a href={result.shortUrl} className="text-xl font-black text-white hover:text-purple-400 break-all block transition-colors tracking-tight" target="_blank" rel="noopener noreferrer">
                     {result.shortUrl}
                   </a>
                 </div>
                 <button
                   onClick={() => copyToClipboard(result.shortUrl)}
-                  className="shrink-0 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 transition-all cursor-pointer"
+                  className="shrink-0 px-4 py-2 rounded-xl text-xs font-extrabold text-slate-300 border border-purple-950 bg-purple-950/20 hover:bg-purple-950/40 hover:text-white transition-all cursor-pointer"
                 >
                   {copied ? "Copied!" : "Copy Link"}
                 </button>
               </div>
-              <div className="mt-5 pt-4 border-t border-slate-100">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Destination URL</p>
-                <p className="text-sm text-slate-500 break-all">{result.originalUrl}</p>
+              <div className="mt-5 pt-4 border-t border-purple-950/25">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Destination URL</p>
+                <p className="text-xs text-slate-400 break-all font-mono">{result.originalUrl}</p>
               </div>
-              <div className="mt-6 pt-5 border-t border-slate-100">
+              <div className="mt-6 pt-5 border-t border-purple-950/25">
                 <div className="flex flex-col sm:flex-row items-center gap-6">
-                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
-                    <QRCodeSVG data-qr-svg value={result.shortUrl} size={140} level="H" bgColor="#ffffff" fgColor="#1e293b" marginSize={2} />
+                  <div className="p-3.5 bg-white rounded-xl">
+                    <QRCodeSVG data-qr-svg value={result.shortUrl} size={140} level="H" bgColor="#ffffff" fgColor="#03000a" marginSize={2} />
                   </div>
                   <div className="flex-1 space-y-3 text-center sm:text-left">
-                    <p className="text-sm font-bold text-slate-800">Dynamic QR Code</p>
-                    <p className="text-xs text-slate-500 leading-relaxed">Download this high-quality QR code to share offline, in printed media, or on mobile device displays.</p>
+                    <p className="text-xs font-bold text-slate-200 tracking-wide uppercase">Dynamic QR Code</p>
+                    <p className="text-xs text-slate-400 leading-relaxed font-medium">Download this vector QR code to share offline, in printed media, or on mobile device displays.</p>
                     <DownloadQRButton url={result.shortUrl} />
                   </div>
                 </div>
@@ -411,22 +447,22 @@ export default function Home() {
         )}
 
         {/* Logos Band */}
-        <section className="py-12 border-t border-b border-slate-100 text-center">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-6">Trusted by developers worldwide</p>
+        <section className="py-12 border-t border-b border-purple-950/25 text-center">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">Trusted by developers worldwide</p>
           <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 opacity-30 select-none">
-            <span className="font-extrabold text-lg text-slate-800">Trello</span>
-            <span className="font-extrabold text-lg text-slate-800">Uber</span>
-            <span className="font-extrabold text-lg text-slate-800">MasterCard</span>
-            <span className="font-extrabold text-lg text-slate-800">Meta</span>
-            <span className="font-extrabold text-lg text-slate-800">Slack</span>
+            <span className="font-extrabold text-lg text-slate-400">Trello</span>
+            <span className="font-extrabold text-lg text-slate-400">Uber</span>
+            <span className="font-extrabold text-lg text-slate-400">MasterCard</span>
+            <span className="font-extrabold text-lg text-slate-400">Meta</span>
+            <span className="font-extrabold text-lg text-slate-400">Slack</span>
           </div>
         </section>
 
         {/* Features Spotlight */}
-        <section id="features" data-reveal className="py-24 opacity-0 translate-y-3 transition-all duration-500">
-          <div className="text-center mb-16 max-w-md mx-auto">
-            <h2 className="text-3xl font-extrabold text-slate-900">Explore features for more efficiency</h2>
-            <p className="mt-3 text-sm text-slate-500 leading-relaxed">Manage your URLs with powerful developer integrations and full metric dashboards.</p>
+        <section id="features" className="py-24 space-y-16">
+          <div className="text-center max-w-md mx-auto space-y-2">
+            <h2 className="text-3xl font-black text-white tracking-tight">Efficiency Redefined</h2>
+            <p className="text-xs text-slate-400 leading-relaxed font-medium">Optimize your URLs with programmatic APIs and detailed metric dashboards.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -435,12 +471,12 @@ export default function Home() {
               { icon: <QRCodeIcon />, title: "Smart QR Codes", desc: "Create scannable code graphics with high resolutions ready for download." },
               { icon: <LockIcon />, title: "Developer API keys", desc: "Build programmatic shortening into your pipelines using secured Bearer API credentials." },
             ].map((f, i) => (
-              <div key={i} className="p-6.5 bg-white border border-slate-100 rounded-3xl hover:border-slate-200/80 transition-all duration-300 shadow-sm shadow-slate-100/5 hover:-translate-y-1">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mb-4 shadow-sm">
+              <div key={i} className="p-6 bg-slate-950/30 border border-purple-950/30 rounded-3xl hover:border-purple-900/40 hover:-translate-y-1 transition-all duration-300">
+                <div className="w-10 h-10 rounded-xl bg-purple-950/50 border border-purple-900/30 flex items-center justify-center text-purple-400 mb-4 shadow-sm">
                   {f.icon}
                 </div>
-                <h3 className="font-bold text-slate-800 text-base mb-2">{f.title}</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">{f.desc}</p>
+                <h3 className="font-bold text-slate-200 text-sm mb-2">{f.title}</h3>
+                <p className="text-xs text-slate-400 leading-relaxed font-medium">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -449,15 +485,15 @@ export default function Home() {
         {/* History / Saved Links list */}
         {!authLoading && history.length > 0 && !authUser && (
           <section className="pb-20 max-w-lg mx-auto animate-fade-up">
-            <h2 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-4">Recent shortened links</h2>
-            <div className="space-y-2">
+            <h2 className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-4">Recent shortened links</h2>
+            <div className="space-y-2.5">
               {history.map((item) => (
-                <div key={item.shortCode + item.createdAt} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-100 hover:border-slate-200 transition-colors">
+                <div key={item.shortCode + item.createdAt} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-950/40 border border-purple-950/30 hover:border-purple-900/40 transition-all">
                   <div className="min-w-0 flex-1">
-                    <a href={item.shortUrl} className="text-sm font-bold text-slate-800 hover:text-blue-600 block truncate transition-colors" target="_blank" rel="noopener noreferrer">{item.shortUrl}</a>
-                    <p className="text-xs text-slate-400 truncate mt-1 font-mono">{item.originalUrl}</p>
+                    <a href={item.shortUrl} className="text-sm font-bold text-white hover:text-purple-400 block truncate transition-colors" target="_blank" rel="noopener noreferrer">{item.shortUrl}</a>
+                    <p className="text-[10px] text-slate-500 truncate mt-1 font-mono">{item.originalUrl}</p>
                   </div>
-                  <button onClick={() => copyToClipboard(item.shortUrl)} className="shrink-0 p-2 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-800 transition-colors cursor-pointer" aria-label="Copy URL">
+                  <button onClick={() => copyToClipboard(item.shortUrl)} className="shrink-0 p-2 rounded-lg hover:bg-purple-950/30 text-slate-400 hover:text-white transition-colors cursor-pointer" aria-label="Copy URL">
                     <CopyIcon />
                   </button>
                 </div>
@@ -468,15 +504,15 @@ export default function Home() {
 
         {!authLoading && savedLinks.length > 0 && authUser?.email && (
           <section className="pb-20 max-w-lg mx-auto animate-fade-up">
-            <h2 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-4">Saved links</h2>
-            <div className="space-y-2">
+            <h2 className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-4">Saved links</h2>
+            <div className="space-y-2.5">
               {savedLinks.filter(l => !l.isArchived).map((item) => (
-                <div key={item.code + item.createdAt} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-100 hover:border-slate-200 transition-colors">
+                <div key={item.code + item.createdAt} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-950/40 border border-purple-950/30 hover:border-purple-900/40 transition-all">
                   <div className="min-w-0 flex-1">
-                    <a href={`${BASE}/${item.code}`} className="text-sm font-bold text-slate-800 hover:text-blue-600 block truncate transition-colors" target="_blank" rel="noopener noreferrer">{`${BASE}/${item.code}`}</a>
-                    <p className="text-xs text-slate-400 truncate mt-1 font-mono">{item.url}</p>
+                    <a href={`${BASE}/${item.code}`} className="text-sm font-bold text-white hover:text-purple-400 block truncate transition-colors" target="_blank" rel="noopener noreferrer">{`${BASE}/${item.code}`}</a>
+                    <p className="text-[10px] text-slate-500 truncate mt-1 font-mono">{item.url}</p>
                   </div>
-                  <button onClick={() => copyToClipboard(`${BASE}/${item.code}`)} className="shrink-0 p-2 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-800 transition-colors cursor-pointer" aria-label="Copy URL">
+                  <button onClick={() => copyToClipboard(`${BASE}/${item.code}`)} className="shrink-0 p-2 rounded-lg hover:bg-purple-950/30 text-slate-400 hover:text-white transition-colors cursor-pointer" aria-label="Copy URL">
                     <CopyIcon />
                   </button>
                 </div>
@@ -486,23 +522,23 @@ export default function Home() {
         )}
 
         {/* Testimonials */}
-        <section data-reveal className="py-20 border-t border-slate-100 opacity-0 translate-y-3 transition-all duration-500">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-extrabold text-slate-900">Hundreds of people already trust us</h2>
-            <p className="mt-3 text-slate-500">Simple, robust, and highly reliable.</p>
+        <section className="py-20 border-t border-purple-950/20">
+          <div className="text-center mb-16 space-y-2">
+            <h2 className="text-3xl font-black text-white tracking-tight">Trusted Worldwide</h2>
+            <p className="text-xs text-slate-400 font-medium">Simple, robust, and highly reliable.</p>
           </div>
           <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {[
               { text: "clikurl has simplified how we distribute QR badges to our offline participants. Setup takes milliseconds and is absolutely free.", author: "Rebecca Foster", role: "Event Manager" },
               { text: "Their developer API is incredibly direct and structured. No fluff, no huge SDK dependencies, just a simple Bearer header.", author: "Dan Torres", role: "Software Engineer" },
             ].map((t, i) => (
-              <div key={i} className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm shadow-slate-100/2 flex flex-col justify-between">
-                <p className="text-sm text-slate-600 leading-relaxed italic">"{t.text}"</p>
-                <div className="mt-5 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold text-xs text-blue-600">{t.author[0]}</div>
+              <div key={i} className="p-8 bg-slate-950/30 border border-purple-950/30 rounded-3xl shadow-sm flex flex-col justify-between hover:border-purple-900/30 transition-all">
+                <p className="text-xs text-slate-300 leading-relaxed italic">"{t.text}"</p>
+                <div className="mt-6 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-purple-950 border border-purple-500/25 flex items-center justify-center font-bold text-xs text-purple-400">{t.author[0]}</div>
                   <div>
-                    <p className="text-xs font-bold text-slate-800">{t.author}</p>
-                    <p className="text-[10px] text-slate-400">{t.role}</p>
+                    <p className="text-xs font-bold text-white">{t.author}</p>
+                    <p className="text-[9px] text-slate-500 font-semibold">{t.role}</p>
                   </div>
                 </div>
               </div>
@@ -511,24 +547,24 @@ export default function Home() {
         </section>
 
         {/* FAQ Accordion */}
-        <section id="faq" data-reveal className="py-20 border-t border-slate-100 opacity-0 translate-y-3 transition-all duration-500">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-extrabold text-slate-900">Your questions, answered</h2>
+        <section id="faq" className="py-20 border-t border-purple-950/20 space-y-12">
+          <div className="text-center">
+            <h2 className="text-3xl font-black text-white tracking-tight">Your questions, answered</h2>
           </div>
-          <div className="max-w-2xl mx-auto space-y-2.5">
+          <div className="max-w-2xl mx-auto space-y-3">
             {faqItems.map((item, i) => (
-              <div key={i} className="rounded-2xl bg-white border border-slate-100 overflow-hidden transition-all duration-300">
+              <div key={i} className="rounded-2xl bg-slate-950/30 border border-purple-950/30 overflow-hidden transition-all duration-300 hover:border-purple-900/30">
                 <button
                   onClick={() => setFaqOpen(faqOpen === i ? null : i)}
-                  className="w-full flex items-center justify-between p-5 text-left text-sm font-bold text-slate-700 hover:text-blue-600 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-5 text-left text-sm font-bold text-slate-300 hover:text-purple-400 transition-colors cursor-pointer"
                 >
                   {item.q}
-                  <svg className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${faqOpen === i ? "rotate-180 text-blue-600" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-4 h-4 text-slate-500 transition-transform duration-300 ${faqOpen === i ? "rotate-180 text-purple-400" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
                 {faqOpen === i && (
-                  <div className="px-5 pb-5 text-xs text-slate-500 leading-relaxed border-t border-slate-50/50 pt-4 animate-fade-up">
+                  <div className="px-5 pb-5 text-xs text-slate-400 leading-relaxed border-t border-purple-950/20 pt-4 animate-fade-up font-medium">
                     {item.a}
                   </div>
                 )}
@@ -538,12 +574,12 @@ export default function Home() {
         </section>
 
         {/* CTA Card Banner */}
-        <section data-reveal className="py-16 text-center opacity-0 translate-y-3 transition-all duration-500">
-          <div className="bg-[#0b1329] rounded-3xl p-10 sm:p-14 max-w-4xl mx-auto relative overflow-hidden text-white shadow-xl shadow-slate-900/10">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-[80px] rounded-full pointer-events-none" />
-            <h2 className="text-3xl font-extrabold mb-3">Get closer to your audience and customers today</h2>
-            <p className="text-xs text-slate-400 mb-8 max-w-sm mx-auto leading-relaxed">Save your shorten history, get API access, and check detailed click statistics on all links.</p>
-            <a href="/pricing" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 active:bg-blue-700 shadow-md shadow-blue-600/10 hover:shadow-blue-600/20 transition-all cursor-pointer">
+        <section className="py-16 text-center">
+          <div className="bg-gradient-to-br from-[#0c051a] to-[#03000a] border border-purple-950/35 rounded-3xl p-10 sm:p-14 max-w-4xl mx-auto relative overflow-hidden text-white shadow-2xl">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 blur-[80px] rounded-full pointer-events-none" />
+            <h2 className="text-3xl font-black mb-3 tracking-tight">Scale your link performance today</h2>
+            <p className="text-xs text-slate-400 mb-8 max-w-xs mx-auto leading-relaxed font-medium">Save your shortening history, get Bearer API keys, and map custom domain names.</p>
+            <a href="/pricing" className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-xs font-black tracking-wide uppercase text-white bg-purple-600 hover:bg-purple-500 active:bg-purple-700 shadow-md shadow-purple-600/10 hover:shadow-purple-600/20 transition-all cursor-pointer border border-purple-500/20">
               Get Started
             </a>
           </div>
@@ -551,8 +587,8 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-100 py-12 text-center bg-white mt-12">
-        <p className="text-xs font-semibold text-slate-400">© 2026 clikurl. Powered by Supabase & Drizzle. All rights reserved.</p>
+      <footer className="border-t border-purple-950/20 py-12 text-center bg-slate-950/25">
+        <p className="text-xs font-semibold text-slate-500">© 2026 clikurl. Powered by Supabase & Drizzle. All rights reserved.</p>
       </footer>
     </div>
   );
@@ -584,7 +620,8 @@ function DownloadQRButton({ url }: { url: string }) {
         URL.revokeObjectURL(a.href);
       });
     };
-    img.src = "data:image/svg+xml;base64," + btoa(data);
+    // Safe Unicode Base64 encoding
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(data)));
   };
 
   const downloadSVG = () => {
@@ -603,7 +640,7 @@ function DownloadQRButton({ url }: { url: string }) {
     <div className="relative inline-block text-left">
       <button
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 transition-all cursor-pointer"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold text-slate-300 border border-purple-950 bg-purple-950/20 hover:bg-purple-950/40 hover:text-white transition-all cursor-pointer"
         aria-haspopup="true"
         aria-expanded={open}
       >
@@ -613,16 +650,16 @@ function DownloadQRButton({ url }: { url: string }) {
         Download QR
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-2 w-40 rounded-xl bg-white border border-slate-200 shadow-2xl py-1 overflow-hidden z-25">
+        <div className="absolute top-full left-0 mt-2 w-40 rounded-xl bg-slate-950 border border-purple-950/80 shadow-2xl py-1 overflow-hidden z-25">
           <button
             onClick={() => { downloadPNG(); setOpen(false); }}
-            className="w-full text-left px-4 py-2 text-xs text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="w-full text-left px-4 py-2 text-xs text-slate-400 hover:bg-purple-950/50 hover:text-white transition-colors cursor-pointer"
           >
             PNG (800×800)
           </button>
           <button
             onClick={() => { downloadSVG(); setOpen(false); }}
-            className="w-full text-left px-4 py-2 text-xs text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="w-full text-left px-4 py-2 text-xs text-slate-400 hover:bg-purple-950/50 hover:text-white transition-colors cursor-pointer"
           >
             Vector SVG
           </button>
@@ -664,7 +701,7 @@ function LockIcon() {
 
 function CopyIcon() {
   return (
-    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
     </svg>
   );
