@@ -15,6 +15,13 @@ interface Link {
 export default function DashboardPage() {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [links, setLinks] = useState<Link[]>([]);
+  const [analyticsReport, setAnalyticsReport] = useState<{
+    totalClicks: number;
+    activeChannels: number;
+    topLink: any;
+    referrers: any[];
+    dailyClicks: any[];
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,6 +38,10 @@ export default function DashboardPage() {
         const linksRes = await fetch("/api/me/links");
         const linksData = await linksRes.json();
         if (linksData.links) setLinks(linksData.links);
+
+        const analyticsRes = await fetch("/api/me/analytics");
+        const analyticsData = await analyticsRes.json();
+        if (analyticsData) setAnalyticsReport(analyticsData);
       } catch {
         window.location.href = "/login";
       } finally {
@@ -43,10 +54,14 @@ export default function DashboardPage() {
   const activeLinks = links.filter((l) => !l.isArchived);
   const totalClicks = activeLinks.reduce((sum, l) => sum + l.clicks, 0);
   const linksCount = activeLinks.length;
-  const mockVisitors = Math.round(totalClicks * 0.85);
+  const avgClicks = linksCount > 0 ? (totalClicks / linksCount).toFixed(1) : "0";
+  const referrerCount = analyticsReport?.referrers?.length || 0;
 
-  const userName = user?.email ? user.email.split("@")[0] : "Showfom";
+  const userName = user?.email ? user.email.split("@")[0] : "User";
   const displayUserName = userName.charAt(0).toUpperCase() + userName.slice(1);
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   if (loading) {
     return (
@@ -61,7 +76,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-800">
-          Good morning, {displayUserName}!
+          {greeting}, {displayUserName}!
         </h1>
         <p className="text-xs text-slate-400 mt-1 font-semibold">Start sharing your first resources!</p>
       </div>
@@ -78,7 +93,7 @@ export default function DashboardPage() {
             <p className="text-2xl font-extrabold text-slate-800 mt-2">{linksCount}</p>
           </div>
           <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 w-max border border-emerald-100">
-            ↗ 2.5%
+            Active
           </span>
         </Card>
 
@@ -91,22 +106,22 @@ export default function DashboardPage() {
             </div>
             <p className="text-2xl font-extrabold text-slate-800 mt-2">{totalClicks.toLocaleString()}</p>
           </div>
-          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 w-max border border-rose-100">
-            ↘ 8.3%
+          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 w-max border border-blue-100">
+            Real-time
           </span>
         </Card>
 
-        {/* Visitors Card */}
+        {/* Avg Clicks Card */}
         <Card className="p-5 bg-white border border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-between h-28">
           <div>
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-              Visitors
+              Avg Clicks
             </div>
-            <p className="text-2xl font-extrabold text-slate-800 mt-2">{mockVisitors.toLocaleString()}</p>
+            <p className="text-2xl font-extrabold text-slate-800 mt-2">{avgClicks}</p>
           </div>
-          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 w-max border border-emerald-100">
-            ↗ 0.7%
+          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 w-max border border-purple-100">
+            Performance
           </span>
         </Card>
 
@@ -117,10 +132,10 @@ export default function DashboardPage() {
               <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg>
               Referrers
             </div>
-            <p className="text-2xl font-extrabold text-slate-800 mt-2">1</p>
+            <p className="text-2xl font-extrabold text-slate-800 mt-2">{referrerCount}</p>
           </div>
-          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-50 text-slate-500 w-max border border-slate-100">
-            - 0.0%
+          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 w-max border border-amber-100">
+            Channels
           </span>
         </Card>
       </div>

@@ -51,8 +51,9 @@ export default function AnalyticsDashboard() {
     const height = 45;
     const paddingBottom = 5;
 
+    const divisor = daily.length > 1 ? daily.length - 1 : 1;
     const points = daily.map((d, index) => {
-      const x = (index / (daily.length - 1)) * width;
+      const x = (index / divisor) * width;
       // Invert Y axis for SVG (0 is top)
       const y = height - (d.count / maxVal) * (height - 15) - paddingBottom;
       return { x, y };

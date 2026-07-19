@@ -1,10 +1,13 @@
 {
-  "name": "urlshawty",
-  "scope": "manojhv13-gmailcoms-projects",
+  "version": 2,
+  "name": "clikurl",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
   "regions": ["iad1"],
   "cleanUrls": true,
-  "trailingSlash": false,
-  "redirects": [],
-  "rewrites": [],
-  "headers": []
+  "trailingSlash": false
 }

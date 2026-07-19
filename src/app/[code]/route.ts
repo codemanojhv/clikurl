@@ -13,6 +13,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    if (link.isArchived) {
+      return NextResponse.json({ error: "Link is archived" }, { status: 410 });
+    }
+
     // Verify custom domain match if configured
     if (link.customDomain) {
       const defaultHosts = ["localhost:3000", "localhost:3001", "clikurl.vercel.app", "clikurl.app"];

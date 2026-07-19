@@ -20,5 +20,4 @@ export function getDb() {
   return dbInstance;
 }
 
-// No-op — tables are created via Supabase migration, not at runtime
-export function initDb() {}
+

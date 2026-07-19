@@ -106,16 +106,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <span className="text-[10px] text-slate-400 font-medium">Premium URL Shortener</span>
         </div>
 
-        {/* Workspace Droplist */}
-        <div className="px-4 py-3 border-b border-slate-100">
-          <div className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors cursor-pointer text-xs font-semibold text-slate-700">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-[9px] text-white">C</div>
-              <span>Workspace</span>
-            </div>
-            <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4 4 4-4" /></svg>
-          </div>
-        </div>
+
 
         {/* Navigation List */}
         <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">

@@ -4,6 +4,11 @@ import { eq, desc, and, sql, isNull } from "drizzle-orm";
 import * as bcrypt from "bcryptjs";
 import crypto from "crypto";
 
+type LinkRow = typeof schema.links.$inferSelect;
+type ApiKeyRow = typeof schema.apiKeys.$inferSelect;
+type DomainRow = typeof schema.domains.$inferSelect;
+type ClickRow = typeof schema.clicks.$inferSelect;
+
 const SALT_ROUNDS = 10;
 const CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -22,6 +27,17 @@ export type LinkRecord = {
 };
 export type ApiKeyRecord = { id: string; name: string; lastChars: string; createdAt: string; revokedAt: string | null };
 
+export type ClickRecord = {
+  id: number;
+  linkCode: string;
+  ip: string | null;
+  userAgent: string | null;
+  referrer: string | null;
+  country: string | null;
+  device: string | null;
+  timestamp: string;
+};
+
 export type AnalyticsData = {
   code: string;
   originalUrl: string;
@@ -32,10 +48,17 @@ export type AnalyticsData = {
   topReferrers: { referrer: string; count: number }[];
   topCountries: { country: string; count: number }[];
   deviceBreakdown: { mobile: number; desktop: number; tablet: number; other: number };
-  recentClicks: any[];
+  recentClicks: ClickRecord[];
 };
 
 // ─── User operations ────────────────────────────────────────────────
+
+export type FullUserRecord = {
+  id: string;
+  email: string;
+  passwordHash: string;
+  createdAt: string;
+};
 
 export async function createUser(email: string, password: string): Promise<UserRecord> {
   const db = getDb();
@@ -47,7 +70,7 @@ export async function createUser(email: string, password: string): Promise<UserR
   return { id, email: normalized, createdAt };
 }
 
-export async function findUserByEmail(email: string): Promise<any | null> {
+export async function findUserByEmail(email: string): Promise<FullUserRecord | null> {
   const db = getDb();
   const normalized = email.toLowerCase().trim();
   const rows = await db.select().from(schema.users).where(eq(schema.users.email, normalized));
@@ -178,7 +201,7 @@ export async function listLinksForOwner(userId: string): Promise<LinkRecord[]> {
     .from(schema.links)
     .where(eq(schema.links.ownerId, userId))
     .orderBy(desc(schema.links.createdAt));
-  return rows.map((r: any) => ({
+  return rows.map((r: LinkRow) => ({
     code: r.code,
     url: r.url,
     createdAt: r.createdAt,
@@ -231,11 +254,11 @@ export async function getAnalyticsFor(code: string): Promise<AnalyticsData | nul
     .orderBy(desc(schema.clicks.timestamp));
 
   const totalClicks = allClicks.length;
-  const clicks24h = allClicks.filter((c: any) => c.timestamp >= dayAgo).length;
-  const clicks7d = allClicks.filter((c: any) => c.timestamp >= weekAgo).length;
+  const clicks24h = allClicks.filter((c: ClickRow) => c.timestamp >= dayAgo).length;
+  const clicks7d = allClicks.filter((c: ClickRow) => c.timestamp >= weekAgo).length;
 
   const referrerCounts: Record<string, number> = {};
-  allClicks.forEach((c: any) => {
+  allClicks.forEach((c: ClickRow) => {
     const ref = c.referrer || "direct";
     referrerCounts[ref] = (referrerCounts[ref] || 0) + 1;
   });
@@ -245,7 +268,7 @@ export async function getAnalyticsFor(code: string): Promise<AnalyticsData | nul
     .map(([referrer, count]) => ({ referrer, count }));
 
   const countryCounts: Record<string, number> = {};
-  allClicks.forEach((c: any) => {
+  allClicks.forEach((c: ClickRow) => {
     const country = c.country || "unknown";
     countryCounts[country] = (countryCounts[country] || 0) + 1;
   });
@@ -255,7 +278,7 @@ export async function getAnalyticsFor(code: string): Promise<AnalyticsData | nul
     .map(([country, count]) => ({ country, count }));
 
   const deviceCounts = { mobile: 0, desktop: 0, tablet: 0, other: 0 };
-  allClicks.forEach((c: any) => {
+  allClicks.forEach((c: ClickRow) => {
     const d = (c.device || "other").toLowerCase();
     if (d in deviceCounts) (deviceCounts as Record<string, number>)[d]++;
     else deviceCounts.other++;
@@ -300,7 +323,7 @@ export async function listApiKeys(userId: string): Promise<ApiKeyRecord[]> {
     .from(schema.apiKeys)
     .where(and(eq(schema.apiKeys.userId, userId), isNull(schema.apiKeys.revokedAt)))
     .orderBy(desc(schema.apiKeys.createdAt));
-  return rows.map((r: any) => ({
+  return rows.map((r: ApiKeyRow) => ({
     id: r.id,
     name: r.name,
     lastChars: r.lastChars,
@@ -348,7 +371,7 @@ export async function addDomain(userId: string, domainName: string): Promise<{ i
 export async function listDomainsForUser(userId: string): Promise<{ id: string; domainName: string; status: string; createdAt: string }[]> {
   const db = getDb();
   const rows = await db.select().from(schema.domains).where(eq(schema.domains.userId, userId));
-  return rows.map((r: any) => ({ id: r.id, domainName: r.domainName, status: r.status || "pending", createdAt: r.createdAt }));
+  return rows.map((r: DomainRow) => ({ id: r.id, domainName: r.domainName, status: r.status || "pending", createdAt: r.createdAt }));
 }
 
 export async function verifyDomain(id: string, userId: string): Promise<boolean> {
