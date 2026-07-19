@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { gsap } from "gsap";
 
 export default function PricingPage() {
   const [user, setUser] = useState<{ id: string; email: string; tier: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
   const [upgradingTier, setUpgradingTier] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadUser() {
@@ -23,6 +25,19 @@ export default function PricingPage() {
       }
     }
     loadUser();
+  }, []);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from(".pricing-card", {
+        y: 45,
+        opacity: 0,
+        duration: 0.9,
+        stagger: 0.15,
+        ease: "power3.out"
+      });
+    }, containerRef);
+    return () => ctx.revert();
   }, []);
 
   const handleSelectTier = async (tierName: string, targetHref: string) => {
@@ -110,31 +125,33 @@ export default function PricingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#03000a] text-slate-100 font-sans relative overflow-hidden selection:bg-purple-500/30 selection:text-purple-200">
+    <div ref={containerRef} className="min-h-screen bg-[#03000a] text-slate-100 font-sans relative overflow-hidden selection:bg-purple-500/30 selection:text-purple-200">
       {/* Background Glow Mesh */}
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-gradient-to-br from-purple-700/10 to-indigo-700/10 blur-[130px] rounded-full pointer-events-none" />
       <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-gradient-to-br from-fuchsia-700/5 to-pink-700/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute inset-0 pointer-events-none opacity-[0.02]" style={{ backgroundImage: "radial-gradient(#ffffff 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
 
-      <header className="sticky top-0 z-50 bg-[#03000a]/80 backdrop-blur-lg border-b border-purple-950/20">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2.5 text-base font-black text-white hover:opacity-90 transition-opacity tracking-tight">
-            <svg className="w-5 h-5 text-purple-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-            </svg>
+      <header className="sticky top-4 z-50 max-w-5xl mx-auto px-4">
+        <div className="bg-[#090317]/70 backdrop-blur-xl border border-purple-500/20 rounded-full px-6 h-14 flex items-center justify-between shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
+          <a href="/" className="flex items-center gap-2.5 text-sm font-black text-white hover:opacity-90 transition-opacity tracking-tight">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center shadow-md shadow-purple-600/30">
+              <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
+              </svg>
+            </div>
             clikurl
           </a>
           <nav className="flex items-center gap-8">
-            <a href="/#features" className="text-sm font-medium text-slate-400 hover:text-white transition-all">Features</a>
-            <a href="/#faq" className="text-sm font-medium text-slate-400 hover:text-white transition-all">FAQ</a>
-            <a href="/pricing" className="text-sm font-semibold text-purple-400 transition-all border-b-2 border-purple-500/50 pb-0.5">Pricing</a>
-            <a href="/docs" className="text-sm font-medium text-slate-400 hover:text-white transition-all">Docs</a>
+            <a href="/#features" className="text-xs font-semibold text-slate-400 hover:text-white transition-all">Features</a>
+            <a href="/#faq" className="text-xs font-semibold text-slate-400 hover:text-white transition-all">FAQ</a>
+            <a href="/pricing" className="text-xs font-bold text-purple-400 transition-all border-b-2 border-purple-500/50 pb-0.5">Pricing</a>
+            <a href="/docs" className="text-xs font-semibold text-slate-400 hover:text-white transition-all">Docs</a>
             {user ? (
-              <a href="/dashboard" className="text-xs font-bold text-white bg-purple-600/90 hover:bg-purple-600 px-4 py-1.5 rounded-full transition-all border border-purple-500/20 shadow-md shadow-purple-900/10">
+              <a href="/dashboard" className="text-xs font-bold text-white bg-purple-600/90 hover:bg-purple-600 px-4 py-1.5 rounded-full transition-all border border-purple-500/20 shadow-md shadow-purple-900/10 glow-btn">
                 Dashboard
               </a>
             ) : (
-              <a href="/login" className="text-sm font-medium text-slate-400 hover:text-white transition-all">
+              <a href="/login" className="text-xs font-semibold text-slate-400 hover:text-white transition-all">
                 Sign in
               </a>
             )}
@@ -144,7 +161,7 @@ export default function PricingPage() {
 
       <main className="max-w-6xl mx-auto px-6 relative z-10 py-24">
         <div className="text-center mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-xs font-semibold text-purple-300 tracking-wide">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-[11px] font-bold text-purple-300 tracking-wider uppercase">
             TRANSPARENT PRICING
           </div>
           <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-none bg-gradient-to-r from-white via-slate-100 to-purple-400 bg-clip-text text-transparent">
@@ -156,7 +173,7 @@ export default function PricingPage() {
 
           {/* Billing Switcher */}
           <div className="pt-6 flex justify-center">
-            <div className="bg-purple-950/20 border border-purple-900/30 p-1.5 rounded-2xl flex items-center gap-1.5 w-max">
+            <div className="bg-[#090317]/80 border border-purple-500/20 p-1.5 rounded-2xl flex items-center gap-1.5 w-max backdrop-blur-md">
               <button
                 onClick={() => setBillingPeriod("monthly")}
                 className={cn(
@@ -185,15 +202,14 @@ export default function PricingPage() {
           {tiers.map((tier) => {
             const priceInfo = getPrice(tier.monthlyPrice);
             const isUserCurrent = user && user.tier === tier.name.toLowerCase();
-            const isOtherCurrent = user && user.tier !== tier.name.toLowerCase();
 
             return (
               <Card
                 key={tier.name}
                 className={cn(
-                  "relative flex flex-col p-8 transition-all duration-300 rounded-3xl border bg-slate-950/40 backdrop-blur-md",
+                  "pricing-card relative flex flex-col p-8 transition-all duration-300 rounded-3xl border bg-slate-950/40 backdrop-blur-md",
                   tier.featured
-                    ? "border-purple-600/60 shadow-[0_0_50px_-10px_rgba(168,85,247,0.2)] scale-[1.02] md:scale-105 z-10"
+                    ? "border-purple-600/60 shadow-[0_0_50px_-10px_rgba(168,85,247,0.25)] scale-[1.02] md:scale-105 z-10"
                     : "border-purple-950/40 hover:border-purple-900/40 hover:shadow-lg"
                 )}
               >
@@ -225,7 +241,7 @@ export default function PricingPage() {
                   onClick={() => handleSelectTier(tier.name, tier.cta.href)}
                   disabled={upgradingTier !== null}
                   className={cn(
-                    "mt-8 w-full inline-flex items-center justify-center rounded-2xl text-xs font-extrabold transition-all h-12 cursor-pointer border",
+                    "mt-8 w-full inline-flex items-center justify-center rounded-2xl text-xs font-extrabold transition-all h-12 cursor-pointer border glow-btn",
                     isUserCurrent
                       ? "bg-purple-950/40 border-purple-500/30 text-purple-300 cursor-default"
                       : tier.featured
